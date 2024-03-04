@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+
+## Created: March 3, 2024
+## Updated: March 3, 2024
+## Author(s): Todd Lenz, tlenz001@ucr.edu
+
+## A wrapper script to perform differential gene expression (DGE) analysis.
+
+function help {
+    echo "EasyDGE.sh --help"
+    echo "usage : SimpleSeq.sh -i INPUT -m METADATA [-q QVALUE] [-h]"
+    echo
+    echo "---------------------------------------------------------------------"
+    echo " Required inputs:"
+    echo "  -i|--input INPUT          : Input read counts file."
+    echo "  -m|--metadata METADATA    : Metadata file."
+    echo "  -c|--control CONTROL      : Control group."
+    echo
+    echo " Optional inputs:"
+    echo "  -q|--qvalue QVALUE        : q-value cutoff."
+    echo "  -h|--help HELP            : Show help message."
+    echo "---------------------------------------------------------------------"
+    exit 0;
+}
+
+
+#############################
+## Define input arguments. ##
+#############################
+for arg in "$@"; do
+    case "$arg" in
+        "--input") set -- "$@" "-i" ;;
+        "--metadata") set -- "$@" "-m" ;;
+        "--control") set -- "$@" "-c" ;;
+        "--qvalue") set -- "$@" "-q" ;;
+        "--help") set -- "$@" "-h" ;;
+        *) set -- "$@" "$arg"
+    esac
+done
+
+pipedir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+SCRIPTS="$pipedir"/scripts
+
+while getopts ":i:m:c:q:h:" opt; do
+    case $opt in
+        i) INPUT="$OPTARG";;
+        m) METADATA="$OPTARG";;
+        c) CONTROL="$OPTARG";;
+        q) QVALUE="$OPTARG";;
+        h) help;;
+        *) echo "Error: '$OPTARG' is an invalid argument."
+    esac
+done
+
+
+############################
+## Check input arguments. ##
+############################
+if [[ -z "$INPUT" ]]; then
+    echo "Error: Input argument required."
+    exit 1
+elif [[ ! -e "$INPUT" ]]; then
+    echo "Error: Input file not found."
+    exit 1
+elif [[ -z "$METADATA" ]]; then
+    echo "Error: Metadata argument required."
+    exit 1
+elif [[ ! -e "$METADATA" ]]; then
+    echo "Error: Metadata file not found."
+    exit 1
+elif [[ -n "$QVALUE" && ! "$QVALUE" =~ ^-?[0-9]+(\.[0-9]+)?$ ]]; then
+    echo "Error: Invalid value for qualue argument."
+    exit 1
+elif [[ -n "$QVALUE" && "$QVALUE" < 0 || "$QVALUE" > 1 ]]; then
+    echo "Error: Invalid value for qualue argument."
+    exit 1
+fi
+
+
+########################################################
+## Define q-value cutoff for differential expression. ##
+########################################################
+if [[ -z $QVALUE ]]; then
+    QVALUE=0.05
+fi
+
+
+##########################################################
+## Compare sample names in metadata file to input file. ##
+##########################################################
+sample_names=$(cut -f1 "$METADATA")
+input_header=$(head -n 1 "$INPUT")
+sorted_sample_names=$(printf "$sample_names" | tr '\n' '\t' | cut -f2- | tr '\t' '\n' | sort | tr '\n' '\t')
+sorted_input_header=$(printf "%s\n" "$input_header" | cut -f2- | tr '\t' '\n' | sort | tr '\n' '\t')
+if [[ $(echo "$input_header" | cut -f1) != "Gene_ID" ]]; then
+    echo "Error: 'Gene_ID' string not found in header of $(basename $INPUT)."
+    exit 1
+elif [[ "$sorted_sample_names" != "$sorted_input_header" ]]; then
+    echo "Error: Sample names in $(basename $INPUT) header do not match names in $(basename $METADATA)."
+    exit 1
+fi
+
+
+#############################################################
+## Check number of sample groups and replicates per group. ##
+#############################################################
+awk 'NR > 1 { counts[$2]++ } END {for (string in counts) {
+    if (counts[string] < 2) {
+        print "Error: " string " appears to have only 1 replicate."
+        print "Two replicates per group are required to perform DGE."
+        exit 1
+        }
+    if (length(counts) < 2) {
+        print "Error: There is only 1 group name found."
+        print "Two unique groups are required to perform DGE."
+        exit 1
+        }
+    }
+}' "$METADATA"
+
+
+Rscript "$SCRIPTS"/differential_expression.R -r "$INPUT" -m "$METADATA" -c "$CONTROL" -q "$QVALUE"

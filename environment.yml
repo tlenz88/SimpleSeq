@@ -1,0 +1,27 @@
+name: SimpleSeq
+channels:
+ - conda-forge
+ - bioconda
+ - defaults
+dependencies:
+ - bioconductor-apeglm=1.24.0
+ - bioconductor-deseq2=1.42.0
+ - bioconductor-diffbind=3.12.0
+ - bioconductor-enhancedvolcano=1.20.0
+ - bioconductor-topgo=2.54.0
+ - bowtie2=2.5.3
+ - cutadapt=4.6
+ - fastqc=0.12.1
+ - hisat2=2.2.1
+ - htseq=2.0.5
+ - macs2=2.2.9.1
+ - picard=3.1.1
+ - python=3.10.13
+ - r-argparse=2.2.2
+ - r-base=4.3.1
+ - r-dplyr=1.1.4
+ - r-ggplot2=3.5.0
+ - r-pheatmap=1.0.12
+ - r-rcolorbrewer=1.1_3
+ - r-tidyverse=2.0.0
+ - samtools=1.19.2
