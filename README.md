@@ -98,7 +98,7 @@ The following is a more detailed description of input arguments:
 
     --quality [-q]: Integer indicating Phred quality score for trimming low-quality bases at the ends of reads during read pairing and for removing low-quality reads during filtering (default = 30).
 
-    --threads [-t]: Integer indicating number of processor threads to use for tools that allow multithreading. If no value is given, the number of available threads will be determined automatically and will use half of available threads on the user's system. The initial sample processing pipeline (i.e. steps performed by ```SimpleSeq.sh```) takes approximately 1 hour to process one samples containing 15 million quality reads using 4 processing threads, though user's experiences may vary.
+    --threads [-t]: Integer indicating number of processor threads to use for tools that allow multithreading. If no value is given, the number of available threads will be determined automatically and will use half of available threads on the user's system.
 
     --chip [-c]: Indicates that the input data is from a ChIP-seq experiment. The ChIP-seq processing pipeline differs in two ways: 1. Bowtie2 is used for read alignment rather than Hisat2, and 2. Samtools depth is used to find read depth at each base pair rather than using HTSeq to find gene coverage.
 
@@ -136,7 +136,7 @@ The following is a more detailed description of input arguments:
     
     If the ```chip [-c]``` flag is utilized, the sorted BAM files are mapped to the genome to find the depth of coverage at each nucleotide using ```samtools depth```. The output BED file is a tab-delimited file with three columns: chromosome name, position and read count. See the [project website](https://www.htslib.org/doc/samtools.html) for more details.
 
-# RNA-seq: differential gene expression analysis and plotting
+# EasyDGE: RNA-seq differential gene expression analysis
 
 EasyDGE is a supplementary tool that performs differential gene expression analysis. It is meant to be used after running SimpleSeq on a set of RNA-seq samples, but can be used on any dataset if the proper inputs are provided.
 
