@@ -6,13 +6,6 @@
 
 ## Performs differential peak calling via DiffBind.
 
-suppressPackageStartupMessages({
-  library(BiocParallel)
-  library(DiffBind)
-  library(tidyverse)
-  library(RColorBrewer)
-})
-
 args <- commandArgs(trailingOnly = TRUE)
 
 ShowHelp <- function() {
@@ -31,6 +24,20 @@ if ("--help" %in% args || "-h" %in% commandArgs() || length(commandArgs(trailing
   ShowHelp()
   quit()
 }
+
+
+###########################################
+## Load packages and install if missing. ##
+###########################################
+load_packages <- function(package_list) {
+    for (pkg in package_list) {
+        if (!requireNamespace(pkg, quietly = TRUE)) {
+            eval(bquote(install.packages(.(pkg), dependencies = TRUE)))
+        }
+        suppressMessages(eval(bquote(library(.(pkg), quietly = TRUE))))
+    }
+}
+load_packages(c("BiocParallel", "DiffBind", "tidyverse", "RColorBrewer"))
 
 
 ############################
