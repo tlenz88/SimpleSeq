@@ -67,7 +67,7 @@ elif [[ "$STEP" == "mapping" ]]; then
             fi
         done
         if [[ "$bam_count" -eq 0 ]]; then
-            echo "Error: Quality filtered & coordinate sorted BAM file(s) not."
+            echo "Error: Quality filtered & coordinate sorted BAM file(s) not"
             echo "found. Start pipeline from the filtering step or run samtools"
             echo "view using the args -q $QUALITY -f 0X02 -F 0X04, and then run"
             echo "samtools sort to sort by coordinate (default)."

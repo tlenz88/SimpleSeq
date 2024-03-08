@@ -144,7 +144,11 @@ fi
 ## Define number of processing threads to use. ##
 #################################################
 if [[ -z $THREADS ]]; then
-    THREADS=$(($(nproc) / 2))
+    if command -v "$nproc" &> /dev/null; then
+        THREADS=$(($(nproc) / 2))
+    else
+        THREADS=$($(sysctl -n hw.ncpu) / 2)
+    fi
 fi
 
 

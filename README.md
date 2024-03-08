@@ -142,7 +142,7 @@ EasyDGE is a supplementary tool that performs differential gene expression analy
 
 ## What tools do I need?
 
-Although EasyDGE attempts to automatically downloads most of the necessary software/tools, depending on a user's system environment some packages may need to be installed manually. Below is a list of all necessary tools to perform differential expression analysis and plotting figures:
+Although EasyDGE attempts to automatically download most of the necessary software/tools, depending on a user's system environment some packages may need to be installed manually. Below is a list of all necessary tools to perform differential expression analysis and plotting of figures:
 
 - [DESeq2](https://bioconductor.org/packages/release/bioc/html/DESeq2.html)
 - [ggplot2](https://ggplot2.tidyverse.org/)
@@ -152,7 +152,7 @@ Although EasyDGE attempts to automatically downloads most of the necessary softw
 - [dplyr](https://dplyr.tidyverse.org/)
 - [EnhancedVolcano](https://bioconductor.org/packages/release/bioc/html/EnhancedVolcano.html)
 
-The SimpleSeq conda environment described above also contains all of the necessary R packages.
+The SimpleSeq conda environment described above also contains all of the necessary R packages and is therefore recommended while running EasyDGE.
 
 ## How do I run EasyDGE?
 
@@ -206,9 +206,25 @@ The following is a more detailed description of input arguments:
 
     --qvalue [-q]: q-value cutoff for filtering results of [DESeq2](https://bioconductor.org/packages/release/bioc/html/DESeq2.html) differential expression analysis. 
 
-# ChIP-seq: peak calling and plotting
+# EasyPeaks: ChIP-seq peak calling analysis
 
-ChIPPeaks is a supplementary tool that performs peak calling and differential peak calling. It is meant to be used after running SimpleSeq on a set of ChIP-seq samples, but can be used on any dataset if the proper inputs are provided.
+EasyPeaks is a supplementary tool that performs peak calling and differential peak calling. It is meant to be used after running SimpleSeq on a set of ChIP-seq samples, but can be used on any dataset if the proper inputs are provided.
+
+## What tools do I need?
+
+Although EasyPeaks attempts to automatically download most of the necessary software/tools, depending on a user's system environment some packages may need to be installed manually. Below is a list of all necessary tools to perform peak calling, differential peak calling and plotting of figures:
+
+- [MACS3](https://github.com/macs3-project/MACS)
+- [ggplot2](https://ggplot2.tidyverse.org/)
+- [pheatmap](https://r-charts.com/correlation/pheatmap/)
+- [RColorBrewer](https://r-graph-gallery.com/38-rcolorbrewers-palettes.html)
+- [apeglm](https://bioconductor.org/packages/release/bioc/html/apeglm.html)
+- [dplyr](https://dplyr.tidyverse.org/)
+- [EnhancedVolcano](https://bioconductor.org/packages/release/bioc/html/EnhancedVolcano.html)
+
+The SimpleSeq conda environment described above also contains all of the necessary R packages and is therefore recommended while running EasyDGE.
+
+## How do I run EasyDGE?
 
 Peak calling is performed using ```macs2 callpeak```. The ```q-value [-q]``` is set at 0.05 and ```genome size [-g]``` is determined automatically. If the data is paired-end, the format of the input will be set to ```-f BEDPE``` so that the insert size of pairs is used to build fragment pileup. The choice of peak calling algorithm--broad or narrow--is also determined automatically based on the 'Factor' column of the metadata file. Broad peak calling is performed for histone modifications, whereas narrow peak calling is for transcription factors. See the [MACS github repo](https://github.com/macs3-project/MACS) for more details.
 

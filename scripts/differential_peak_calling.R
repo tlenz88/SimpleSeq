@@ -32,6 +32,7 @@ if ("--help" %in% args || "-h" %in% commandArgs() || length(commandArgs(trailing
   quit()
 }
 
+
 ############################
 ## Check input arguments. ##
 ############################
@@ -93,6 +94,7 @@ write.table(diff_peaks,
   row.names = F
 )
 
+
 ##########################################################
 ## Plot output from differential peak calling analysis. ##
 ##########################################################
@@ -105,7 +107,7 @@ dba.plotHeatmap(chip_df,
   colScheme = "Reds"
 )
 
-#
+# 
 if (nrow(diff_peaks) > 1) {
   hmap <- colorRampPalette(c("blue", "white", "red"))(n = 15)
   dba.plotHeatmap(chip_df,
