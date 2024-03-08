@@ -87,18 +87,18 @@ function check_BAM() {
 }
 
 
-#data_dir="$(dirname "$(readlink -f "$METADATA")")"
-#while IFS= read -r line; do
-#    SampleID="$(echo "$line" | awk '{ print $1 }')"
-#    bamReads="$(echo "$line" | awk '{ print $5 }')"
-#    bamReads="$(check_BAM "$bamReads")"
-#    bamControl="$(echo "$line" | awk '{ print $7 }')"
-#    bamControl="$(check_BAM "$bamControl")"
-#    bam_format="$(check_bam_type "$bamReads")"
-#    alg="$(check_alg_type "$line")"
-#    outdir="$(dirname "$(readlink -f "$bamReads")")"
-#    macs2 callpeak -t "$bamReads" -c "$bamControl" -f "$bam_format" -g "$gsize" -n "$SampleID" -q "$QVALUE" --outdir "$outdir" -B "$alg"
-#done < <(tail -n +2 "$METADATA")
+data_dir="$(dirname "$(readlink -f "$METADATA")")"
+while IFS= read -r line; do
+    SampleID="$(echo "$line" | awk '{ print $1 }')"
+    bamReads="$(echo "$line" | awk '{ print $5 }')"
+    bamReads="$(check_BAM "$bamReads")"
+    bamControl="$(echo "$line" | awk '{ print $7 }')"
+    bamControl="$(check_BAM "$bamControl")"
+    bam_format="$(check_bam_type "$bamReads")"
+    alg="$(check_alg_type "$line")"
+    outdir="$(dirname "$(readlink -f "$bamReads")")"
+    macs2 callpeak -t "$bamReads" -c "$bamControl" -f "$bam_format" -g "$gsize" -n "$SampleID" -q "$QVALUE" --outdir "$outdir" -B "$alg"
+done < <(tail -n +2 "$METADATA")
 
 
 while IFS= read -r line; do

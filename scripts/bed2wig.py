@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
-# Used to convert a BED file to a WIG file for use with IGV
+## Created: February 10, 2022
+## Updated: March 8, 2024
+## Author(s): Todd Lenz, tlenz001@ucr.edu
+
+## Used to convert a BED file to a WIG file for use with IGV.
 
 import sys
 import csv

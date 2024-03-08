@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## Created: September 22, 2022
-## Updated: March 3, 2024
+## Updated: March 8, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## A complete pipeline for RNA-seq and ChIP-seq analysis.
@@ -323,6 +323,14 @@ function mapping() {
             basename "$i"
             "$SCRIPTS"/read_mapping.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
         done
+        count_files=("$OUTPUT"/*/*_counts.txt)
+        read_counts="${count_files[0]}"
+        cut -f1 "$read_counts" > read_counts.txt
+        for cf in "${count_files[@]:1}"; do
+            paste read_counts.txt <(cut -f2- "$cf") > merged.tmp && mv merged.tmp read_counts.txt
+        done
+        header=$(printf "Gene_ID\t%s\n" "$(basename -a "${count_files[@]%%.*}")" | tr '\n' '\t' | sed 's/\t$/\n/')
+        { echo "$header"; cat read_counts.txt; } > merged.tmp && mv merged.tmp read_counts.txt
     else
         if [[ "$STEP" = "$fs" ]]; then
             if ! command -v samtools &> /dev/null; then
@@ -335,17 +343,9 @@ function mapping() {
         for i in "$INPUT"/*; do
             basename "$i"
             "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
+            bed_file=$(find -L "$i" -mindepth 1 -name "*.bed")
+            "$SCRIPTS"/bed2wig.py -i "$bed_file"
         done
-    fi
-    if [[ -z "$CHIP" ]]; then
-        count_files=("$OUTPUT"/*/*_counts.txt)
-        read_counts="${count_files[0]}"
-        cut -f1 "$read_counts" > read_counts.txt
-        for cf in "${count_files[@]:1}"; do
-            paste read_counts.txt <(cut -f2- "$cf") > merged.tmp && mv merged.tmp read_counts.txt
-        done
-        header=$(printf "Gene_ID\t%s\n" "$(basename -a "${count_files[@]%%.*}")" | tr '\n' '\t' | sed 's/\t$/\n/')
-        { echo "$header"; cat read_counts.txt; } > merged.tmp && mv merged.tmp read_counts.txt
     fi
 }
 
