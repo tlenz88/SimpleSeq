@@ -214,7 +214,7 @@ EasyPeaks is a supplementary tool that performs peak calling and differential pe
 
 Although EasyPeaks attempts to automatically download most of the necessary software/tools, depending on a user's system environment some packages may need to be installed manually. Below is a list of all necessary tools to perform peak calling, differential peak calling and plotting of figures:
 
-- [MACS3](https://github.com/macs3-project/MACS)
+- [MACS2](https://github.com/macs3-project/MACS)
 - [ggplot2](https://ggplot2.tidyverse.org/)
 - [pheatmap](https://r-charts.com/correlation/pheatmap/)
 - [RColorBrewer](https://r-graph-gallery.com/38-rcolorbrewers-palettes.html)
@@ -224,33 +224,7 @@ Although EasyPeaks attempts to automatically download most of the necessary soft
 
 The SimpleSeq conda environment described above also contains all of the necessary R packages and is therefore recommended while running EasyDGE.
 
-## How do I run EasyDGE?
-
-Peak calling is performed using ```macs2 callpeak```. The ```q-value [-q]``` is set at 0.05 and ```genome size [-g]``` is determined automatically. If the data is paired-end, the format of the input will be set to ```-f BEDPE``` so that the insert size of pairs is used to build fragment pileup. The choice of peak calling algorithm--broad or narrow--is also determined automatically based on the 'Factor' column of the metadata file. Broad peak calling is performed for histone modifications, whereas narrow peak calling is for transcription factors. See the [MACS github repo](https://github.com/macs3-project/MACS) for more details.
-
-The DiffBind R package is used for differential peak calling analysis. The metadata file is used to dictate experimental design and will determine what comparisons are made. See the [DiffBind vignette](https://bioconductor.org/packages/release/bioc/vignettes/DiffBind/inst/doc/DiffBind.pdf) for more information.
-
-## How should I set up the metadata?
-
-The metadata file should contain a minimum of 7 columns used to describe the format of a user's ChIP-seq experiment, including sample names, relationships between samples, replicate numbers, and file paths. Although it isn't required for the metadata to be formatted exactly as shown in the ```example_metadata.txt``` file, it's recommended that any additional columns be added at the end (to the right) of the existing columns. By default, the 'Condition' column is used to group samples for differential peak calling. File paths should be relative to the metadata file path.
-
-The following are brief descriptions of the template columns:
-
-    --SampleID: Short string unique to each target sample.
-
-    --Factor: Antibody used for immunoprecipitation of each target sample.
-
-    --Condition: String used to differentiate sample conditions (e.g. knockout (KO), control (CTRL), etc.).
-
-    --Replicate: Integer indicating replicate number.
-
-    --bamReads: Relative path to coordinate sorted BAM files for target samples.
-
-    --ControlID: Short string unique to each control sample.
-
-    --bamControl: Relative path to coordinate sorted BAM files for control samples.
-
-## ChIPPeaks.sh
+## How do I run EasyPeaks?
 
 Brief description of input arguments via help message:
 
@@ -275,8 +249,28 @@ The following is a more detailed description of input arguments:
 
 - **Input arguments**:
 
-    --metadata [-m]: A tab-delimited text file containing ChIP-seq experiment metadata. Metadata file should have at least seven columns: SampleID, Factor, Condition, Replicate, bamReads, ControlID and bamControl. The metadata file will be automatically modified to include two additional columns--Peaks and PeakCaller--after peak calling. Use the ```example_metadata.txt``` file in the ```examples``` directory as a template. See the [DiffBind vignette](https://bioconductor.org/packages/release/bioc/vignettes/DiffBind/inst/doc/DiffBind.pdf) and the following section of this README for more information on setting up the metadata file.
+    --metadata [-m]: A tab-delimited text file containing ChIP-seq experiment metadata. Metadata file should have at least seven columns: SampleID, Factor, Condition, Replicate, bamReads, ControlID and bamControl. The metadata file will be automatically modified to include two additional columns--Peaks and PeakCaller--after peak calling. Use the ```example_metadata.txt``` file in the ```examples``` directory as a template. See the [DiffBind vignette](https://bioconductor.org/packages/release/bioc/vignettes/DiffBind/inst/doc/DiffBind.pdf) and the next section of this README for more information on setting up the metadata file.
 
     --control[-c]: String indicating the control samples in the experiment. This string should be under the 'Condition' column in the metadata file.
 
     --genome [-g]: Directory containing genome files for the organism of interest. A FASTA file should be present in the directory so that any additional required genome files can be automatically created if missing. All genome files should have the same basename.
+
+## How should I set up the metadata?
+
+The metadata file should contain a minimum of 7 columns used to describe the format of a user's ChIP-seq experiment, including sample names, relationships between sample groups, replicate numbers, and file paths. Although it isn't required for the metadata to be formatted exactly as shown in the ```example_chip_metadata.txt``` file, it's recommended that any additional columns be added at the end (to the right) of the existing columns. By default, the 'Condition' column is used to group samples for differential peak calling. File paths should be relative to the metadata file path.
+
+The following are brief descriptions of the template columns:
+
+    --SampleID: Short string unique to each target sample.
+
+    --Factor: Antibody used for immunoprecipitation of each target sample. Used to determine peak calling parameters.
+
+    --Condition: String used to differentiate sample groups (e.g. knockout (KO), control (CTRL), etc.). Can be the same as the 'Factor' column if differentiating binding sites of two (or more) antibodies.
+
+    --Replicate: Integer indicating replicate number.
+
+    --bamReads: Relative path to coordinate sorted BAM files for target samples.
+
+    --ControlID: Short string unique to each control sample.
+
+    --bamControl: Relative path to coordinate sorted BAM files for control samples.

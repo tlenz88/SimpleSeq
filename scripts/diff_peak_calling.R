@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 ## Created: June 19, 2022
-## Updated: February 24, 2024
+## Updated: March 8, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## Performs differential peak calling via DiffBind.
@@ -43,7 +43,7 @@ load_packages(c("BiocParallel", "DiffBind", "tidyverse", "RColorBrewer"))
 ############################
 ## Check input arguments. ##
 ############################
-for (i in c(1, 3, 5)) {
+for (i in c(1, 3)) {
   if (!(args[i] %in% c("--metadata", "-m", "--control", "-c"))) {
     cat(paste("Error: ", args[i], " is an invalid argument.\n"))
     quit()
@@ -51,6 +51,7 @@ for (i in c(1, 3, 5)) {
     if (file.exists(args[i + 1])) {
       metadata <- args[i + 1]
       outdir <- dirname(metadata)
+      setwd(outdir)
     } else {
       cat("Error: Invalid input for metadata argument.\n")
     }
@@ -77,12 +78,13 @@ chip_consensus <- dba.peakset(chip_df,
   consensus = c(DBA_CONDITION),
   minOverlap = 1
 )
-chip_df <- dba.count(chip_df, bUseSummarizeOverlaps = TRUE, bParallel = FALSE)
+chip_df <- suppressWarnings(dba.count(chip_df,
+  bUseSummarizeOverlaps = TRUE))
 chip_df <- dba.contrast(chip_df,
   reorderMeta = list(Condition = control),
   minMembers = 2
 )
-chip_df <- dba.analyze(chip_df, method = DBA_DESEQ2, bParallel = FALSE)
+chip_df <- dba.analyze(chip_df, method = DBA_DESEQ2)
 chip_df.report <- dba.report(chip_df,
   method = DBA_DESEQ2,
   th = 0.05,

@@ -1,5 +1,7 @@
+#!/usr/bin/env Rscript
+
 ## Created: October 5, 2023
-## Updated: March 3, 2024
+## Updated: March 8, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## Performs differential expression analysis via DESeq2.
@@ -201,7 +203,6 @@ sigMat <- assay(rld)[topVarGenes, ]
 sigMat <- sigMat[, order(colnames(sigMat))]
 ann_colors = list(group = color_map[1:length(unique(metaData$group))])
 names(ann_colors$group) <- unique(metaData$group)
-
 pheatmap(
   sigMat,
   main = "Top 300 variable genes",

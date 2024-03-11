@@ -56,7 +56,7 @@ done
 pipedir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 SCRIPTS="$pipedir"/scripts
 
-while getopts ":i:g:o:s:q:t:c:r:h:" opt; do
+while getopts ":i:g:o:s:q:t:crh" opt; do
     case $opt in
         i) INPUT="$OPTARG";;
         g) GENOME="$OPTARG";;
@@ -102,8 +102,12 @@ fi
 if [[ -z "$OUTPUT" ]]; then
     echo "No output folder selected. Files will be saved to input directory."
     OUTPUT="$(dirname "$(readlink -f "$INPUT")")"/output_files
-fi
-if [[ -e "$OUTPUT" && "$OUTPUT" != "$INPUT" && -n "$STEP" && "$STEP" != "quality_check" ]]; then
+elif [[ ! -e "$OUTPUT" ]]; then
+    mkdir "$OUTPUT"
+    for i in "$INPUT"/*; do
+        mkdir "$OUTPUT"/"$(basename "$i")"
+    done
+elif [[ -e "$OUTPUT" && "$OUTPUT" != "$INPUT" && -z "$STEP" ]]; then
     echo "$OUTPUT folder alreads exists. Do you want to overwrite it? (y/n)"
     read -r ans
     if [[ "$ans" = "y" ]]; then
@@ -113,22 +117,17 @@ if [[ -e "$OUTPUT" && "$OUTPUT" != "$INPUT" && -n "$STEP" && "$STEP" != "quality
             mkdir "$OUTPUT"/"$(basename "$i")"
         done
     fi
-elif [[ ! -e "$OUTPUT" ]]; then
-    mkdir "$OUTPUT"
-    for i in "$INPUT"/*; do
-        mkdir "$OUTPUT"/"$(basename "$i")"
-    done
 fi
 
 
 ############################
 ## Define logs directory. ##
 ############################
-if [[ ! -e "$(dirname "$OUTPUT")"/logs ]]; then
-    log_dir="$(dirname "$OUTPUT")"/logs
+if [[ ! -e "$OUTPUT"/logs ]]; then
+    log_dir="$OUTPUT"/logs
     mkdir "$log_dir"
 else
-    log_dir="$(dirname "$OUTPUT")"/logs
+    log_dir="$OUTPUT"/logs
 fi
 
 
@@ -169,7 +168,8 @@ if [[ -n $STEP ]]; then
         "filtering") FILTERED_STEPS=("${ALL_STEPS[@]:4}");;
         "sorting") FILTERED_STEPS=("${ALL_STEPS[@]:5}");;
         "mapping") FILTERED_STEPS=("${ALL_STEPS[@]:6}");;
-        *) echo "Invalid step: $step"; exit 1;;
+        *) echo "Invalid step: $step" >&2
+           exit 1
     esac
 else
     FILTERED_STEPS=("${ALL_STEPS[@]}")
@@ -201,8 +201,10 @@ function trimming() {
     echo "Running Cutadapt to trim reads."
     echo "---------------------------------------------------------------------"
     for i in "$INPUT"/*; do
-        basename "$i"
-        "$SCRIPTS"/read_trimming.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -q "$QUALITY" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
+        if [[ -d "$i" && "$i" != "$log_dir" ]]; then
+            basename "$i"
+            "$SCRIPTS"/read_trimming.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -q "$QUALITY" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
+        fi
     done
     echo
 }
@@ -225,10 +227,12 @@ function alignment() {
     echo "Running ${alignment_tool} to align reads to the genome."
     echo "---------------------------------------------------------------------"
     for i in "$INPUT"/*; do
-        basename "$i"
-        "$SCRIPTS"/read_alignment.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -t "$THREADS" "$alignment_flag" >> "$log_dir"/"$fs".log 2>&1
-        if [[ -n "$REMOVE" ]]; then
-            rm "$(find -L "$i" -mindepth 1 -name "*_trimmed.fastq.gz")"
+        if [[ -d "$i" && "$i" != "$log_dir" ]]; then
+            basename "$i"
+            "$SCRIPTS"/read_alignment.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -t "$THREADS" "$alignment_flag" >> "$log_dir"/"$fs".log 2>&1
+            if [[ -n "$REMOVE" ]]; then
+                rm "$(find -L "$i" -mindepth 1 -name "*_trimmed.fastq.gz")"
+            fi
         fi
     done
     echo
@@ -242,16 +246,18 @@ function deduplication() {
     echo "Running Picartools to remove PCR duplicates."
     echo "---------------------------------------------------------------------"
     for i in "$INPUT"/*; do
-        basename "$i"
-        "$SCRIPTS"/pcr_deduplication.sh -i "$i" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
-        if [[ -n "$REMOVE" ]]; then
-            find -L "$i" -mindepth 1 -name "*.sam" | while IFS= read -r s; do
-                if grep -q 'XT:A:U' "$s"; then
-                    :
-                else
-                    rm "$s"
-                fi
-            done
+        if [[ -d "$i" && "$i" != "$log_dir" ]]; then
+            basename "$i"
+            "$SCRIPTS"/pcr_deduplication.sh -i "$i" -o "$OUTPUT" >> "$log_dir"/"$fs".log 2>&1
+            if [[ -n "$REMOVE" ]]; then
+                find -L "$i" -mindepth 1 -name "*.sam" | while IFS= read -r s; do
+                    if grep -q 'XT:A:U' "$s"; then
+                        :
+                    else
+                        rm "$s"
+                    fi
+                done
+            fi
         fi
     done
     echo
@@ -272,12 +278,14 @@ function filtering() {
     fi
     echo "Running Samtools to filter low quality alignments."
     echo "---------------------------------------------------------------------"
+    local samtools_step="filtering"
     for i in "$INPUT"/*; do
-        basename "$i"
-        samtools_step="filtering"
-        "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -q "$QUALITY" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
-        if [[ -n "$REMOVE" ]]; then
-            rm "$(find -L "$i" -mindepth 1 -name "*.sam")"
+        if [[ -d "$i" && "$i" != "$log_dir" ]]; then
+            basename "$i"
+            "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -q "$QUALITY" -t "$THREADS" "$alignment_flag" >> "$log_dir"/"$fs".log 2>&1
+            if [[ -n "$REMOVE" ]]; then
+                rm "$(find -L "$i" -mindepth 1 -name "*.sam")"
+            fi
         fi
     done
     echo
@@ -293,15 +301,17 @@ function sorting() {
     fi
     echo "Running Samtools to sort and index reads."
     echo "---------------------------------------------------------------------"
+    local samtools_step="sorting"
     for i in "$INPUT"/*; do
-        basename "$i"
-        samtools_step="sorting"
-        "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
-        if [[ -n "$REMOVE" ]]; then
-            if samtools view -H "$i" | grep -q '^@HD.*SO:coordinate'; then
-                :
-            else
-                rm "$(find -L "$i" -mindepth 1 -name "$i")"
+        if [[ -d "$i" && "$i" != "$log_dir" ]]; then
+            basename "$i"
+            "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -t "$THREADS" "$alignment_flag" >> "$log_dir"/"$fs".log 2>&1
+            if [[ -n "$REMOVE" ]]; then
+                if samtools view -H "$i" | grep -q '^@HD.*SO:coordinate'; then
+                    :
+                else
+                    rm "$(find -L "$i" -mindepth 1 -name "$i")"
+                fi
             fi
         fi
     done
@@ -320,8 +330,10 @@ function mapping() {
         echo "Running HTSeq to find read coverage for each gene."
         echo "---------------------------------------------------------------------"
         for i in "$INPUT"/*; do
-            basename "$i"
-            "$SCRIPTS"/read_mapping.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
+            if [[ -d "$i" && "$i" != "$log_dir" ]]; then
+                basename "$i"
+                "$SCRIPTS"/read_mapping.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
+            fi
         done
         count_files=("$OUTPUT"/*/*_counts.txt)
         read_counts="${count_files[0]}"
@@ -341,10 +353,12 @@ function mapping() {
         echo "---------------------------------------------------------------------"
         samtools_step="mapping"
         for i in "$INPUT"/*; do
-            basename "$i"
-            "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
-            bed_file=$(find -L "$i" -mindepth 1 -name "*.bed")
-            "$SCRIPTS"/bed2wig.py -i "$bed_file"
+            if [[ -d "$i" && "$i" != "$log_dir" ]]; then
+                basename "$i"
+                "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
+                bed_file=$(find -L "$i" -mindepth 1 -name "*.bed")
+                "$SCRIPTS"/bed2wig.py "$bed_file"
+            fi
         done
     fi
 }

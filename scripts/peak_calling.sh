@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-## Created: March, 2024
-## Updated: March 4, 2024
+## Created: March 4, 2024
+## Updated: March 8, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## Wrapper for running MACS callpeak.
@@ -20,8 +20,8 @@ done
 ## Calculate genome size. ##
 ############################
 function get_chrom_sizes() {
-    fa=$(find -L "$1" -mindepth 1 -name "*.fasta" -o -name "*.fa")
-    chrom_sizes=$(find -L "$1" -mindepth 1 -name "*.sizes")
+    local fa=$(find -L "$1" -mindepth 1 -name "*.fasta" -o -name "*.fa")
+    local chrom_sizes=$(find -L "$1" -mindepth 1 -name "*.sizes")
     if [[ -n "$chrom_sizes" ]]; then
         gsize="$(awk '{ sum += $2 } END { print sum }' "$chrom_sizes")"
     elif [[ -z "$fa" && -z "$chrom_sizes" ]]; then
@@ -49,17 +49,8 @@ fi
 ###########################
 ## Perform peak calling. ##
 ###########################
-function check_bam_type() {
-    if [[ $(samtools view -f 0x1 "$1" | head -n 1 | wc -l) -eq 1 ]]; then
-        echo "BAMPE"
-    else
-        echo "BAM"
-    fi
-}
-
-
 function check_alg_type() {
-    Factor=$(echo "$1" | awk '{ print $2 }')
+    local Factor=$(echo "$1" | awk '{ print $2 }')
     if [[ $Factor =~ ^H2[AB]K || $Factor =~ ^H3K ]]; then
         echo "--broad"
     else
@@ -69,30 +60,44 @@ function check_alg_type() {
 
 
 function check_BAM() {
-    bamfile="$data_dir/$1"
+    local bamfile="$1"
     if [[ $(samtools view --rf 0x400  "$bamfile" | head -n 1 | wc -l) -eq 0 ]]; then
         echo "The BAM file $(basename $bamfile) has not been PCR deduplicated."
         echo "It is recommended that users run picard MarkDuplicates prior to"
         echo "performing peak calling."
-    elif [[ $(samtools view -H "$bamfile" | grep -E '^@PG.*-f\s*0X02\s*-F\s*0X04' | head -n 1 | wc -l) -eq 0 ]]; then
+    fi
+    if [[ $(samtools view -H "$bamfile" | grep -E '^@PG.*-f\s*0X02\s*-F\s*0X04' | head -n 1 | wc -l) -eq 0 ]]; then
         echo "The BAM file $(basename $bamfile) has not been quality filtered."
         echo "It is recommended that users run samtools view using the args"
         echo "-q 30 -f 0X02 -F 0X04 prior to performing peak calling."
-    elif [[ $(samtools view -H "$bamfile" | grep -E '^@HD.*SO:coordinate' | head -n 1 | wc -l) -eq 0 ]]; then
+    fi
+    if [[ $(samtools view -H "$bamfile" | grep -E '^@HD.*SO:coordinate' | head -n 1 | wc -l) -eq 0 ]]; then
         echo "Error: The BAM file $(basename $bamfile) has not been coordinate"
         echo "sorted, which is required to run macs3 callpeak. Run samtools"
         echo "sort to sort by coordinate (default)."
         exit 1
     fi
+    echo "$bamfile"
 }
 
 
-data_dir="$(dirname "$(readlink -f "$METADATA")")"
+function check_bam_type() {
+    local bamfile="$1"
+    if [[ $(samtools view -f 0x1 "$bamfile" | head -n 1 | wc -l) -eq 1 ]]; then
+        echo "BAMPE"
+    else
+        echo "BAM"
+    fi
+}
+
+
 while IFS= read -r line; do
     SampleID="$(echo "$line" | awk '{ print $1 }')"
     bamReads="$(echo "$line" | awk '{ print $5 }')"
+    bamReads="$(readlink -f "$bamReads")"
     bamReads="$(check_BAM "$bamReads")"
     bamControl="$(echo "$line" | awk '{ print $7 }')"
+    bamControl="$(readlink -f "$bamControl")"
     bamControl="$(check_BAM "$bamControl")"
     bam_format="$(check_bam_type "$bamReads")"
     alg="$(check_alg_type "$line")"
@@ -102,7 +107,7 @@ done < <(tail -n +2 "$METADATA")
 
 
 while IFS= read -r line; do
-    if [[ "$(echo "$line" | awk '{ print NF }')" -eq 7 ]]; then
+    if [[ "$(echo "$line" | awk '{ print NF }')" -lt 9 ]]; then
         if [[ "$(echo "$line" | awk '{ print $1 }')" = "SampleID" ]]; then
             echo -e "$line\tPeaks\tPeakCaller"
         else

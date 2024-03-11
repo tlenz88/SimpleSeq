@@ -8,7 +8,7 @@
 
 function help {
     echo "EasyPeaks.sh --help"
-    echo "usage : EasyPeaks.sh -m METADATA -c CONTROL -g GENOME [-q QVALUE] [-t THREADS] [-h]"
+    echo "usage : EasyPeaks.sh -m METADATA -c CONTROL -g GENOME [-s STEP] [-q QVALUE] [-t THREADS] [-h]"
     echo
     echo "---------------------------------------------------------------------"
     echo " Required inputs:"
@@ -18,9 +18,9 @@ function help {
     echo
     echo " Optional inputs:"
     echo "  -s|--step STEP            : Choose starting step."
-    echo "            peak_calling    : Initial quality check."
-    echo "       diff_peak_calling    : Adapter trimming."
-    echo "           TSS_profiling    : Read alignment."
+    echo "            peak_calling    : Peak calling."
+    echo "       diff_peak_calling    : Differential peak calling."
+    echo "           TSS_profiling    : TSS profiling."
     echo "  -q|--qvalue QVALUE        : q-value cutoff for peak calling."
     echo "  -t|--threads THREADS      : Processor threads."
     echo "  -h|--help HELP            : Show help message."
@@ -37,6 +37,7 @@ for arg in "$@"; do
         "--metadata") set -- "$@" "-m" ;;
         "--control") set -- "$@" "-c" ;;
         "--genome") set -- "$@" "-g" ;;
+        "--step") set -- "$@" "-s" ;;
         "--qvalue") set -- "$@" "-q" ;;
         "--threads") set -- "$@" "-t" ;;
         "--help") set -- "$@" "-h" ;;
@@ -47,11 +48,12 @@ done
 pipedir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 SCRIPTS="$pipedir"/scripts
 
-while getopts ":m:c:g:q:t:h:" opt; do
+while getopts ":m:c:g:s:q:t:h:" opt; do
     case $opt in
         m) METADATA="$OPTARG";;
         c) CONTROL="$OPTARG";;
         g) GENOME="$OPTARG";;
+        s) STEP="$OPTARG";;
         q) QVALUE="$OPTARG";;
         t) THREADS="$OPTARG";;
         h) help;;
@@ -153,14 +155,14 @@ fi
 ## Check starting step. ##
 ##########################
 STEP="${STEP/^ //}"
-ALL_STEPS=("peak_calling" "differential_peak_calling" "TSS_profiling")
+ALL_STEPS=("peak_calling" "diff_peak_calling") # "TSS_profiling" "plot_chromosomes" "plot_genes")
 
 if [[ -n $STEP ]]; then
     step="$(echo "$STEP" | tr '[:upper:]' '[:lower:]')"
     echo "Starting analysis pipeline at the $step step."
     case "$step" in
         "peak_calling") FILTERED_STEPS=("${ALL_STEPS[@]}");;
-        "differential_peak_calling") FILTERED_STEPS=("${ALL_STEPS[@]:1}");;
+        "diff_peak_calling") FILTERED_STEPS=("${ALL_STEPS[@]:1}");;
         "TSS_profiling") FILTERED_STEPS=("${ALL_STEPS[@]:2}");;
         *) echo "Invalid step: $step"; exit 1;;
     esac
@@ -175,7 +177,7 @@ fi
 function peak_calling() {
     pkgs=("macs2" "samtools")
     for pkg in "${pkgs[@]}"; do
-        if ! command -v "macs2" &> /dev/null; then
+        if ! command -v "$pkg" &> /dev/null; then
             "$SCRIPTS"/package_installer.sh "macs2"
         fi
     done
@@ -188,35 +190,24 @@ function peak_calling() {
 function diff_peak_calling() {
     if [[ -z "$CONTROL" ]]; then
         echo "Error: Control argument required for differential peak calling."
+        exit 1
     elif [[ $(awk '{ print $3 }' < "$METADATA" | grep -c "$CONTROL") -eq 0 ]]; then
         echo "Error: Control argument not found in metadata."
-    else
-        echo "Finding differential peaks."
-        echo "-----------------------------------------------------------------"
-        Rscript "$SCRIPTS"/diff_peaks.R -m "$METADATA" -c "$CONTROL" >> "$log_dir"/"$step".log 2>&1
+        exit 1
     fi
+    echo "Finding differential peaks."
+    echo "-----------------------------------------------------------------"
+    Rscript "$SCRIPTS"/diff_peak_calling.R -m "$METADATA" -c "$CONTROL" >> "$log_dir"/"$step".log 2>&1
 }
 
 
 function TSS_profiling() {
+    if ! command -v "deeptools" &> /dev/null; then
+        "$SCRIPTS"/package_installer.sh "deeptools"
+    fi
     echo "Performing TSS coverage profiling."
     echo "---------------------------------------------------------------------"
-    unique_values=$(awk 'NR > 1 { print $3 }' "$METADATA" | sort -u)
-    for value in $unique_values; do
-        bamReads="$(awk -v prefix="$data_dir/" '$3 == $value { print prefix $5 }' "$METADATA")"
-        bamControl="$(awk -v prefix="$data_dir/" '$3 == $value { print prefix $7 }' "$METADATA")"
-        outdir="$OUTPUT/$(basename "$(dirname "$(readlink -f "$tfq_r1")")")/$(basename "${tfq_r1%*}")"
-        {
-            samtools merge -@ 18 "$output_dir"/"${value%%.*}"_target.bam "$bamReads"
-            samtools index -@ 18 "$output_dir"/"${value%%.*}"_target.bam
-            samtools merge -@ 18 "$output_dir"/"${value%%.*}"_control.bam "$bamControl"
-            samtools index -@ 18 "$output_dir"/"${value%%.*}"_control.bam
-            bamCompare -b1 "$output_dir"/"${value%%.*}"_target.bam -b2 "$output_dir"/"${value%%.*}"_control.bam --outFileName "$output_dir"/"${value%%.*}".bw --scaleFactorsMethod None --normalizeUsing RPKM --operation subtract -bs 1 --ignoreDuplicates -p "$THREADS"
-        } >> "$log_dir"/"$step".log 2>&1
-    done
-    computeMatrix reference-point -S "$data_dir"/*.bw -R "$gtf" -o "$data_dir"/TSS_coverage.matrix -b 500 -a 1500 -bs 1 -p "$THREADS" >> "$log_dir"/TSS_coverage.log 2>&1
-    plotProfile -m "$data_dir"/TSS_coverage.matrix -o "$fig_dir"/TSS_coverage_profile.pdf --perGroup >> "$log_dir"/TSS_coverage.log 2>&1
-    echo
+    "$SCRIPTS"/TSS_coverage.sh -i "$METADATA" -t "$THREADS" >> "$log_dir"/"$step".log 2>&1
 }
 
 
@@ -233,7 +224,6 @@ function plot_genes() {
 ###################
 ## Run pipeline. ##
 ###################
-STEPS=("peak_calling") # "diff_peak_calling", "TSS_profiling", "plot_chromosomes", "plot_genes")
-for step in "${STEPS[@]}"; do
+for step in "${FILTERED_STEPS[@]}"; do
     "$step"
 done
