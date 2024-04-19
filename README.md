@@ -39,7 +39,7 @@ To make installation of SimpleSeq dependencies easier, users can create a conda 
 
 1. Download and install [miniconda](https://docs.conda.io/en/latest/miniconda.html) or [anaconda](https://www.anaconda.com/download).
 
-2. Create conda environment: ```conda env create -f environment.yml```
+2. Installing the package will automatically attempt to create the SimpleSeq conda environment. If conda was downloaded after installing SimpleSeq, the environment can be created using: ```conda env create -f environment.yml```
 
 3. Activate environment: ```conda activate SimpleSeq```
 
