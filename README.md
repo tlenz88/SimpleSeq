@@ -56,9 +56,7 @@ Additional scripts used to automate plotting are available to users in the ```sc
 Brief description of input arguments via help message:
 
 ```
-    SimpleSeq.sh --help
     usage : SimpleSeq.sh -i INPUT -g GENOME [-o OUTPUT] [-s STEP] [-q QUALITY] [-t THREADS] [-c CHIP] [-r REMOVE] [-h]
-
     ---------------------------------------------------------------------
      Required inputs:
       -i|--input  INPUT       : Input data folder.
