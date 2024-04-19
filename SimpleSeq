@@ -140,7 +140,7 @@ fi
 ## Define Phred score for quality filtering. ##
 ###############################################
 if [[ -z $QUALITY ]]; then
-    QUALITY=40
+    QUALITY=30
 fi
 
 

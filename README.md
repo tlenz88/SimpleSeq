@@ -157,9 +157,7 @@ The SimpleSeq conda environment described above also contains all of the necessa
 Brief description of input arguments via help message:
 
 ```
-    EasyDGE.sh --help
     usage : EasyDGE.sh -i INPUT [-o OUTPUT] [-q QUALITY] [-h]
-
     ---------------------------------------------------------------------
      Required inputs:
       -i|--input INPUT          : Input read counts file.
@@ -227,9 +225,7 @@ The SimpleSeq conda environment described above also contains all of the necessa
 Brief description of input arguments via help message:
 
 ```
-    ChIPPeaks.sh --help
-    usage : ChIPPeaks.sh -m METADATA -c CONTROL -g GENOME [-t THREADS] [-h]
-
+    usage : EasyPeaks.sh -m METADATA -c CONTROL -g GENOME [-t THREADS] [-h]
     ---------------------------------------------------------------------
      Required inputs:
       -m|--metadata METADATA    : ChIP-seq sample metadata file.
