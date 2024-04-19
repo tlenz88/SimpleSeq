@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## Created: February 29, 2024
-## Updated: March 1, 2024
+## Updated: April 19, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## Wrapper for running Samtools to perform quality filtering,
@@ -23,9 +23,9 @@ done
 
 # Find SAM/BAM files based on the step
 if [[ "$STEP" == "filtering" ]]; then
-    input_files=("$INPUT"/*.sam)
+    input_files=$(find -L "$INPUT" -mindepth 1 -name "*.sam")
 elif [[ "$STEP" == "sorting" || "$STEP" == "mapping" ]]; then
-    input_files=("$INPUT"/*.bam)
+    input_files=$(find -L "$INPUT" -mindepth 1 -name "*.bam")
 else
     echo "Error: Invalid step specified." >&2
     exit 1
