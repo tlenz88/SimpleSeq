@@ -1,36 +1,36 @@
 #!/usr/bin/env bash
 
 ## Created: September 22, 2022
-## Updated: March 8, 2024
+## Updated: April 19, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## A complete pipeline for RNA-seq and ChIP-seq analysis.
 
 function help {
-    echo "SimpleSeq.sh --help"
-    echo "usage : SimpleSeq.sh -i INPUT -g GENOME [-o OUTPUT] [-s STEP] [-q QUALITY] [-t THREADS] [-c] [-r] [-h]"
     echo
+    echo "usage : SimpleSeq.sh -i INPUT -g GENOME [-o OUTPUT] [-s STEP] [-q QUALITY] [-t THREADS] [-c] [-r] [-h]"
     echo "---------------------------------------------------------------------"
     echo " Required inputs:"
-    echo "  -i|--input  INPUT       : Input data folder."
-    echo "  -g|--genome GENOME      : Directory containing genome files."
+    echo "  -i|--input  INPUT    : Input data folder."
+    echo "  -g|--genome GENOM    : Directory containing genome files."
     echo
     echo " Optional inputs:"
-    echo "  -o|--output OUTPUT      : Output folder."
-    echo "  -s|--step STEP          : Choose starting step."
-    echo "         quality_check    : Initial quality check."
-    echo "              trimming    : Adapter trimming."
-    echo "             alignment    : Read alignment."
-    echo "         deduplication    : Remove PCR duplicates (for ChIP-seq)."
-    echo "             filtering    : Filtering low-quality reads."
-    echo "               sorting    : Sorting reads by coordinate."
-    echo "               mapping    : Mapping reads to each gene/base pair."
-    echo "  -q|--quality QUALITY    : Phred quality score for filtering."
-    echo "  -t|--threads THREADS    : Processor threads."
-    echo "  -c|--chip CHIP          : Samples are from ChIP-seq experiment."
-    echo "  -r|--remove REMOVE      : Remove intermediate files."
-    echo "  -h|--help HELP          : Show help message."
+    echo "  -o|--output OUTPUT   : Output folder."
+    echo "  -s|--step STEP       : Choose starting step."
+    echo "         quality_check : Initial quality check."
+    echo "              trimming : Adapter trimming."
+    echo "             alignment : Read alignment."
+    echo "         deduplication : Remove PCR duplicates (for ChIP-seq)."
+    echo "             filtering : Filtering low-quality reads."
+    echo "               sorting : Sorting reads by coordinate."
+    echo "               mapping : Mapping reads to each gene/base pair."
+    echo "  -q|--quality QUALITY : Phred quality score for filtering."
+    echo "  -t|--threads THREADS : Processor threads."
+    echo "  -c|--chip CHIP       : Samples are from ChIP-seq experiment."
+    echo "  -r|--remove REMOVE   : Remove intermediate files."
+    echo "  -h|--help HELP       : Show help message."
     echo "---------------------------------------------------------------------"
+    echo
     exit 0;
 }
 
@@ -52,6 +52,11 @@ for arg in "$@"; do
         *) set -- "$@" "$arg"
     esac
 done
+
+if [[ $# -eq 0 ]]; then
+    help
+    exit 1
+fi
 
 pipedir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 SCRIPTS="$pipedir"/scripts
@@ -135,7 +140,7 @@ fi
 ## Define Phred score for quality filtering. ##
 ###############################################
 if [[ -z $QUALITY ]]; then
-    QUALITY=30
+    QUALITY=40
 fi
 
 
@@ -231,7 +236,7 @@ function alignment() {
             basename "$i"
             "$SCRIPTS"/read_alignment.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -t "$THREADS" "$alignment_flag" >> "$log_dir"/"$fs".log 2>&1
             if [[ -n "$REMOVE" ]]; then
-                rm "$(find -L "$i" -mindepth 1 -name "*_trimmed.fastq.gz")"
+                rm -f "$(find -L "$i" -mindepth 1 -name "*_trimmed.fastq.gz")"
             fi
         fi
     done
@@ -254,7 +259,7 @@ function deduplication() {
                     if grep -q 'XT:A:U' "$s"; then
                         :
                     else
-                        rm "$s"
+                        rm -f "$s"
                     fi
                 done
             fi
@@ -284,7 +289,7 @@ function filtering() {
             basename "$i"
             "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -q "$QUALITY" -t "$THREADS" "$alignment_flag" >> "$log_dir"/"$fs".log 2>&1
             if [[ -n "$REMOVE" ]]; then
-                rm "$(find -L "$i" -mindepth 1 -name "*.sam")"
+                rm -f "$(find -L "$i" -mindepth 1 -name "*.sam")"
             fi
         fi
     done
@@ -310,7 +315,7 @@ function sorting() {
                 if samtools view -H "$i" | grep -q '^@HD.*SO:coordinate'; then
                     :
                 else
-                    rm "$(find -L "$i" -mindepth 1 -name "$i")"
+                    rm -f "$(find -L "$i" -mindepth 1 -name "$i")"
                 fi
             fi
         fi

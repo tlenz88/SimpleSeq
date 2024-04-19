@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+## Created: April 18, 2024
+## Updated: April 19, 2024
+## Author(s): Todd Lenz, tlenz001@ucr.edu
+
+# Define package details
+PKG_NAME="SimpleSeq"
+PKG_DIR=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
+PKG_EXE="$PKG_DIR/$PKG_NAME"
+SCRIPTS_DIR="$PKG_DIR/scripts/*"
+
+# Make the scripts executable
+chmod +x $PKG_NAME
+for script in $SCRIPTS_DIR; do
+    chmod +x $script
+done
+
+# Build conda environment
+if command -v "conda" &> /dev/null; then
+    if conda env list | grep -q $PKG_NAME; then
+        echo "$PKG_NAME environment already exists."
+        echo "Would you like to rebuild the environment? (y/n)"
+        read -r ans
+        if [[ "$ans" = "y" ]]; then
+            conda env remove -y -n $PKG_NAME
+            conda env create -f $PKG_DIR/environment.yml
+            source $(conda info --base)/etc/profile.d/conda.sh
+        fi
+    else
+        conda env create -f $PKG_DIR/environment.yml
+        source $(conda info --base)/etc/profile.d/conda.sh
+    fi
+fi
+
+# Add SimpleSeq to PATH
+echo "export PATH=\$PATH:$PKG_DIR/" >> ~/.bashrc
+echo "export PATH=\$PATH:$PKG_DIR/" >> update_path
+chmod +x update_path
+source update_path
+rm update_path
+
+# Test if installation is successful
+if command -v "$PKG_NAME" &> /dev/null; then
+    echo "Installation completed successfully! You can now use $PKG_NAME."
+else
+    echo "Error: Installation failed."
+    exit 1
+fi

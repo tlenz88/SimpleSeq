@@ -11,7 +11,7 @@ Required input arguments:
 1. b1--BED file containing genome-wide per-base coverage for 
    conditional sample. 
    To generage this file from a BAM file:
-   bedtools genomecov -d -ibam ${i}_sorted.bam > ${i}_sorted.bed
+   samtools depth -a sample_sorted.bam
 2. b2--BED file containing genome-wide per-base coverage for 
    control sample.
 
@@ -79,7 +79,7 @@ def subtract_chip(bed1, bed2):
     """ Subtract control reads from target reads. """
     bed = bed1.merge(bed2, on=[0,1]).fillna(0)
     bed.columns = range(len(bed.columns))
-    bed[4] = bed[3] - bed[2]
+    bed[4] = bed[2] - bed[3]
     bed.drop([2,3], axis=1, inplace=True)
     bed.loc[bed[4] < 0, 4] = 0
     bed.columns = range(len(bed.columns))

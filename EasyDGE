@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
 
 ## Created: March 3, 2024
-## Updated: March 3, 2024
+## Updated: April 19, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## A wrapper script to perform differential gene expression (DGE) analysis.
 
 function help {
-    echo "EasyDGE.sh --help"
-    echo "usage : SimpleSeq.sh -i INPUT -m METADATA [-q QVALUE] [-h]"
     echo
+    echo "usage : SimpleSeq.sh -i INPUT -m METADATA [-q QVALUE] [-h]"
     echo "---------------------------------------------------------------------"
     echo " Required inputs:"
-    echo "  -i|--input INPUT          : Input read counts file."
-    echo "  -m|--metadata METADATA    : Metadata file."
-    echo "  -c|--control CONTROL      : Control group."
+    echo "  -i|--input INPUT       : Input read counts file."
+    echo "  -m|--metadata METADATA : Metadata file."
+    echo "  -c|--control CONTROL   : Control group."
     echo
     echo " Optional inputs:"
-    echo "  -q|--qvalue QVALUE        : q-value cutoff."
-    echo "  -h|--help HELP            : Show help message."
+    echo "  -q|--qvalue QVALUE     : q-value cutoff."
+    echo "  -h|--help HELP         : Show help message."
     echo "---------------------------------------------------------------------"
+    echo
     exit 0;
 }
 
@@ -37,6 +37,11 @@ for arg in "$@"; do
         *) set -- "$@" "$arg"
     esac
 done
+
+if [[ $# -eq 0 ]]; then
+    help
+    exit 1
+fi
 
 pipedir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 SCRIPTS="$pipedir"/scripts
