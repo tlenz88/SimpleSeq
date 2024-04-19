@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## Created: February 22, 2024
-## Updated: March 10, 2024
+## Updated: April 19, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## Wrapper for running Hisat2/Bowtie2 on trimmed fastq files.
@@ -18,6 +18,11 @@ while getopts ":i:g:o:t:c" opt; do
            exit 1
     esac
 done
+
+if [[ $# -eq 0 ]]; then
+    echo "Check input arguments and retry."
+    exit 1
+fi
 
 # Set alignment tool and extension based on CHIP option
 if [[ -n "$CHIP" ]]; then

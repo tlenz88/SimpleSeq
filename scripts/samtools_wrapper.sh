@@ -21,6 +21,11 @@ while getopts ":i:s:o:q:t:c" opt; do
     esac
 done
 
+if [[ $# -eq 0 ]]; then
+    echo "Check input arguments and retry."
+    exit 1
+fi
+
 # Find SAM/BAM files based on the step
 if [[ "$STEP" == "filtering" ]]; then
     input_files=$(find -L "$INPUT" -mindepth 1 -name "*.sam")
