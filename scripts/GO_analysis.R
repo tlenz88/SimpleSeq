@@ -134,8 +134,8 @@ ggplot(GO_results_pos[1:10, ]) +
     axis.line.y = element_line(color = "#000000", linewidth = 0.1),
     panel.background = element_blank(),
     aspect.ratio = 1/2,
-    panel.grid.major.x = element_line(linewidth = 0.1, 
-      linetype = "dashed", 
+    panel.grid.major.x = element_line(linewidth = 0.1,
+      linetype = "dashed",
       colour = "#666666"
     )
   )

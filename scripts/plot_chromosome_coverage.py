@@ -268,7 +268,8 @@ def main():
     genes, centromeres, df, out, samples, res, sample_colors = input_params(args)
     df = data_binning(df, res)
     if args.ymax:
-        max_yval = df[list(df.columns)[2:]].max().max()
+        #max_yval = df[list(df.columns)[2:]].max().max()
+        max_yval = 5000
     max_xval = max(df[0].value_counts())
     pdf = PdfPages(out)
     num_plots = len(df[0].unique())*(len(samples)+1)

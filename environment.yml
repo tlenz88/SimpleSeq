@@ -27,3 +27,4 @@ dependencies:
  - r-rcolorbrewer=1.1_3
  - r-tidyverse=2.0.0
  - samtools=1.19.2
+ - seaborn=0.13.2
