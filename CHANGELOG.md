@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 ## [1.0.1] - 2024-05-21
 ### Changed
 - Updated method of argument parsing.
+- Improved error handling and added more comments to aid debugging.
 
 ### Fixed
 - Fixed several issues with "-c" flag functionality.
