@@ -65,7 +65,6 @@ for input_file in "${input_files[@]}"; do
     
     # Sorts BAM file by coordinate
     elif [[ "$STEP" == "sorting" ]]; then
-        echo "input_file"
         echo "Sorting $input_file by coordinate using samtools" >&2
         if samtools view -H "$input_file" | grep -qE '^@PG.*-f\s*0x02\s*-F\s*0x04'; then
             if [[ -z "$CHIP" ]]; then
