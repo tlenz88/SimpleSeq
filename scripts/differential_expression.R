@@ -223,3 +223,21 @@ pheatmap(
 )
 
 dev.off()
+
+#var_genes <- read.csv("F:/organism_genome/Pfalciparum3D7/var.gff", sep = "\t", header = FALSE)
+#var_genes <- subset(var_genes, V3 == "protein_coding_gene")
+#var_genes <- var_genes["V9"]
+#var_gene_list <- str_extract(var_genes$V9, "(?<=ID=)[^;]+")
+#gene_colors <- ifelse(rownames(resLFCapeglm) %in% var_gene_list, "#FF0000", "#000000")
+#plotMA(
+#    resLFCapeglm,
+#    alpha = qval,
+#    main = paste(treatment, " vs ", control),
+#    ylim = c(min_log2FC, max_log2FC),
+#    xaxt = "n",
+#    cex = 0.5,
+#    cex.lab = 1.2,
+#    colLine = "#000000",
+#    colNonSig = "#999999",
+#    col = gene_colors
+#)

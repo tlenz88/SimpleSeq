@@ -144,7 +144,7 @@ def input_params(args):
     if args.colors:
         sample_colors = args.colors
     else:
-        sample_colors = sns.color_palette('colorblind', n_colors = len(args.bed))
+        sample_colors = sns.color_palette('colorblind', n_colors=len(args.bed))
     res = int(args.resolution)
     return genes, centromeres, df, out, samples, res, sample_colors
 
@@ -275,14 +275,19 @@ def main():
     num_plots = len(df[0].unique())*(len(samples)+1)
     plot_range = [*range(num_plots)]
     plot_idx = 0
-    #sample_colors = ['#F75D53', '#5D53F7', '#53F75D']
     fig = plt.figure()
     fig.set_figheight(num_plots)
     fig.set_figwidth(20)
+    H3K9_yval_list = [1370, 1968, 1912, 1906, 847, 1407, 1962, 2110, 1694, 1678, 1785, 1742, 1703, 666]
+    #input_yval_list = [97, 99, 180, 151, 96, 99, 98, 103, 100, 115, 124, 192, 101, 98]
+    y_num = 0
     for chr, idx in zip(df[0].unique(), range(len(df[0].unique()))):
         chr_df = df[df[0] == chr].copy()
         if args.ymax is None:
-            max_yval = chr_df[list(chr_df.columns)[2:]].max().max()
+            #max_yval = chr_df[list(chr_df.columns)[2:]].max().max()
+            max_yval = H3K9_yval_list[y_num]
+            #max_yval = input_yval_list[y_num]
+            y_num += 1
         for i in [*range(len(samples))]:
             ax = plt.subplot2grid((num_plots, 20), (plot_range[plot_idx], 0), 
                                   colspan=int(math.ceil(max(chr_df[1]) 

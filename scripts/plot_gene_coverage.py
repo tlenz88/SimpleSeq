@@ -185,7 +185,7 @@ def check_delimiter(gene_list):
     elif tab_count == max_count:
         return '\t'
     else:
-        print('Can\'t determine delimiter of gene_list.')
+        print("Can't determine delimiter of gene_list.")
 
 
 def normalize_df(df, norm):
@@ -195,9 +195,9 @@ def normalize_df(df, norm):
             mmr = df[i].sum() / 1000000
             df[i] = df[i].div(mmr)
     else:
-        print('Provided method of normalization is not valid so data will not '
-              'be normalized. Run script with -h flag to see valid '
-              'normalization methods.')
+        print("Provided method of normalization is not valid so data will not "
+              "be normalized. Run script with -h flag to see valid "
+              "normalization methods.")
         pass
     return df
 

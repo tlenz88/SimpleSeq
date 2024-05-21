@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## Created: September 22, 2022
-## Updated: April 19, 2024
+## Updated: May 21, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## A complete pipeline for RNA-seq and ChIP-seq analysis.
@@ -38,43 +38,24 @@ function help {
 #############################
 ## Define input arguments. ##
 #############################
-for arg in "$@"; do
-    case "$arg" in
-        "--input") set -- "$@" "-i" ;;
-        "--genome") set -- "$@" "-g" ;;
-        "--output") set -- "$@" "-o" ;;
-        "--step") set -- "$@" "-s" ;;
-        "--quality") set -- "$@" "-q" ;;
-        "--threads") set -- "$@" "-t" ;;
-        "--chip") set -- "$@" "-c" ;;
-        "--remove") set -- "$@" "-r" ;;
-        "--help") set -- "$@" "-h" ;;
-        *) set -- "$@" "$arg"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -i|--input) INPUT="${2%/}"; shift 2 ;;
+        -g|--genome) GENOME="${2%/}"; shift 2 ;;
+        -o|--output) OUTPUT="${2%/}"; shift 2 ;;
+        -s|--step) STEP="$2"; shift 2 ;;
+        -q|--quality) QUALITY="$2"; shift 2 ;;
+        -t|--threads) THREADS="$2"; shift 2 ;;
+        -c|--chip) CHIP=true; shift ;;
+        -r|--remove) REMOVE=true; shift ;;
+        -h|--help) help ;;
+        *) echo "Error: Invalid argument '$1'"
+           help ;;
     esac
 done
-
-if [[ $# -eq 0 ]]; then
-    help
-    exit 1
-fi
 
 pipedir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 SCRIPTS="$pipedir"/scripts
-
-while getopts ":i:g:o:s:q:t:crh" opt; do
-    case $opt in
-        i) INPUT="$OPTARG";;
-        g) GENOME="$OPTARG";;
-        o) OUTPUT="$OPTARG";;
-        s) STEP="$OPTARG";;
-        q) QUALITY="$OPTARG";;
-        t) THREADS="$OPTARG";;
-        c) CHIP=true;;
-        r) REMOVE=true;;
-        h) help;;
-        *) echo "Error: '$OPTARG' is an invalid argument."
-    esac
-done
 
 
 ############################

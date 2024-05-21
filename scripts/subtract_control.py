@@ -71,7 +71,7 @@ def normalize_df(df, norm):
             mmr = df[i].sum() / 1000000
             df[i] = df[i].div(mmr)
     else:
-        print('Error: Provided method of normalization is not valid.')
+        print("Error: Provided method of normalization is not valid.")
         pass
     return df
 
@@ -92,7 +92,7 @@ def main():
     bed1 = pd.read_csv(args.bed1, sep='\t', header=None)
     bed2 = pd.read_csv(args.bed2, sep='\t', header=None)
     if args.normalize:
-        print('Normalizing data using %s' % str(args.normalize).upper())
+        print("Normalizing data using %s" % str(args.normalize).upper())
         norm_bed1 = normalize_df(bed1, args.normalize)
         norm_bed2 = normalize_df(bed2, args.normalize)
         diff_bed = subtract_chip(norm_bed1, norm_bed2)
@@ -101,14 +101,14 @@ def main():
     if args.output:
         outfile = ''.join([os.path.splitext(os.path.basename(args.bed1))[0], 
                            '_diff.bed'])
-        diff_bed.to_csv('%s/%s' % (args.output, outfile), sep = '\t', 
-                        header = False, index = False)
+        diff_bed.to_csv('%s/%s' % (args.output, outfile), sep='\t', 
+                        header=False, index=False)
     else:
         outdir = os.path.dirname(os.path.abspath(args.bed1))
         outfile = ''.join([os.path.splitext(os.path.basename(args.bed1))[0], 
                            '_diff.bed'])
-        diff_bed.to_csv('%s/%s' % (outdir, outfile), sep = '\t', 
-                        header = False, index = False)
+        diff_bed.to_csv('%s/%s' % (outdir, outfile), sep='\t', 
+                        header=False, index=False)
 
 
 if __name__ == '__main__':
