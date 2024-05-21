@@ -10,11 +10,6 @@ import sys
 import csv
 
 def bed_to_wig(bed_file):
-    if len(sys.argv) != 2:
-        print("Usage: python3 bed2wig.py input.bed")
-        sys.exit(1)
-    
-    bed_to_wig(bed_file)
     wig_file = bed_file.replace('.bed', '.wig')
     read_num = ['track type=wiggle_0 name=track_label']
     
@@ -28,4 +23,7 @@ def bed_to_wig(bed_file):
         wig.write('\n'.join(read_num))
 
 if __name__ == "__main__":
-    bed_to_wig()
+    if len(sys.argv) != 2:
+        print("Usage: python3 bed2wig.py input.bed")
+        sys.exit(1)
+    bed_to_wig(sys.argv[1])

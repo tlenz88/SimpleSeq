@@ -75,6 +75,10 @@ for input_file in "${input_files[@]}"; do
                 if ! samtools view -H "$input_file" | grep -qE '^@PG.*ID:MarkDuplicates'; then
                     echo "Error: BAM files must be deduplicated and quality filtered before sorting ChIP-seq data." >&2
                     continue
+                else
+                    samtools sort -@ "$THREADS" "$input_file" -o "${bam_prefix}_sorted.bam"
+                    samtools stats -@ "$THREADS" -d -x "${bam_prefix}_sorted.bam" > "${bam_prefix}_stats.txt"
+                    samtools index -@ "$THREADS" -b "${bam_prefix}_sorted.bam"
                 fi
             fi
         else
@@ -84,6 +88,7 @@ for input_file in "${input_files[@]}"; do
     
     # Finds per-base coverage of BAM file
     elif [[ "$STEP" == "mapping" ]]; then
+        echo "Mapping genome-wide coverage of $input_file" >&2
         if ! samtools view -H "$input_file" | grep -qE '^@HD.*SO:coordinate' || 
            ! samtools view -H "$input_file" | grep -qE '^@PG.*-f\s*0x02\s*-F\s*0x04' ||
            ! samtools view -H "$input_file" | grep -qE '^@PG.*ID:MarkDuplicates'; then
