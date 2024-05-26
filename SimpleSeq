@@ -270,6 +270,7 @@ function filtering() {
     for i in "$INPUT"/*; do
         if [[ -d "$i" && "$i" != "$log_dir" ]]; then
             basename "$i"
+            local QUALITY=40
             "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -q "$QUALITY" -t "$THREADS" "$alignment_flag" >> "$log_dir"/"$fs".log 2>&1
             if [[ -n "$REMOVE" ]]; then
                 rm -f "$(find -L "$i" -mindepth 1 -name "*.sam")"
@@ -326,7 +327,7 @@ function mapping() {
         count_files=("$OUTPUT"/*/*_counts.txt)
         read_counts="${count_files[0]}"
         cut -f1 "$read_counts" > read_counts.txt
-        for cf in "${count_files[@]:1}"; do
+        for cf in "${count_files[@]}"; do
             paste read_counts.txt <(cut -f2- "$cf") > merged.tmp && mv merged.tmp read_counts.txt
         done
         header=$(printf "Gene_ID\t%s\n" "$(basename -a "${count_files[@]%%.*}")" | tr '\n' '\t' | sed 's/\t$/\n/')

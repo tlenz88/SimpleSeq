@@ -18,6 +18,7 @@ done
 
 GENOME="$(readlink -f "$GENOME")"
 gff="$(find -L "$GENOME" -mindepth 1 -name "*.gff")"
+gff="/mnt/f/organism_genome/Pfalciparum3D7/PlasmoDB-58_Pfalciparum3D7.gff"
 if [[ -z "$gff" ]]; then
     echo "Error: GFF file not found in $GENOME directory."
     exit 1
@@ -32,7 +33,7 @@ bam_count=$(find -L "$INPUT" -mindepth 1 -name "*.bam" | wc -l)
 if [[ "$bam_count" -ge 1 ]]; then
     sbam=$(find -L "$INPUT" -mindepth 1 -name "*.bam")
     for bfile in $sbam; do
-        if samtools view -H "$bfile" | grep -E '^@PG.*-f\s*0X02\s*-F\s*0X04' && samtools view -H "$bfile" | grep -E '^@HD.*SO:coordinate'; then
+        if samtools view -H "$bfile" | grep -E '^@PG.*-f\s*0x02\s*-F\s*0x04' && samtools view -H "$bfile" | grep -E '^@HD.*SO:coordinate'; then
             stxt="$OUTPUT/$(basename "$(dirname "$(readlink -f "$bfile")")")/$(basename "${bfile%%.*}")"
             htseq-count -s reverse -t "$gene_string" -i ID "$bfile" "$gff" -n "$THREADS" >> "${stxt}_counts.txt"
         else
