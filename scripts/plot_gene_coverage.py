@@ -11,7 +11,6 @@ plotted track--i.e. the longest gene will fill the width of the figure
 and all other genes are proportionally plotted against it.
 """
 
-
 import sys
 import os
 import math
@@ -21,7 +20,6 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-
 
 def parse_args(args):
     parser = argparse.ArgumentParser()
@@ -91,8 +89,11 @@ def parse_args(args):
                         required=False,
                         default=500,
                         type=int)
+    parser.add_argument('--global_ymax',
+                        dest='global_ymax',
+                        action='store_true',
+                        help='Use the same maximum y-value for all plots. If not set, each plot will have its own y-max.')
     return parser.parse_args()
-
 
 def input_params(args):
     """
@@ -131,8 +132,7 @@ def input_params(args):
         df = normalize_df(df, args.normalize)
     res = int(args.resolution)
     dist = int(args.distance)
-    return genes, exons, df, out, samples, res, dist
-
+    return genes, exons, df, out, samples, res, dist, args.global_ymax
 
 def filter_gff(gff):
     """ Extracts gene and exon accessions, names and descriptions. """
@@ -144,12 +144,11 @@ def filter_gff(gff):
     genes[10] = genes[8].str.extract(r'Name=(.*?);', expand=True)
     genes[11] = genes[8].str.extract(r'description=(.*?);', expand=True)
     genes.drop([2,8], axis=1, inplace=True)
-    genes[11] = genes[11].str.replace(r'%2C', ',', regex=True)
+    #genes[11] = genes[11].str.replace(r'%2C', ',', regex=True)
     exons[9] = exons[8].str.extract(r'exon_(.*?)\.[1-9]-E', expand=True)
     exons[10] = exons[8].str.extract(r'exon_.*?\.([1-9]).*?;', expand=True)
     exons = exons[exons[10] == '1'].reset_index(drop=True).drop([8,10],axis=1)
     return genes, exons
-
 
 def extract_genes(genes, exons, gene_list):
     """
@@ -165,7 +164,6 @@ def extract_genes(genes, exons, gene_list):
     genes = genes[genes[9].isin(list_of_genes)]
     exons = exons[exons[9].isin(list_of_genes)]
     return genes, exons
-
 
 def check_delimiter(gene_list):
     """ Identify delimiter for list of genes. """
@@ -187,7 +185,6 @@ def check_delimiter(gene_list):
     else:
         print("Can't determine delimiter of gene_list.")
 
-
 def normalize_df(df, norm):
     """ Normalize data from BED files. """
     if norm == 'CPM':
@@ -200,7 +197,6 @@ def normalize_df(df, norm):
               "normalization methods.")
         pass
     return df
-
 
 def extract_gene_regions(df, genes, dist):
     """ Extract read counts for genes of interest. """
@@ -222,7 +218,6 @@ def extract_gene_regions(df, genes, dist):
             gdf = gene_df
     return gdf
 
-
 def data_binning(df, res):
     """ Bins read counts per gene. """
     df[len(df.columns)] = (df.iloc[:, 1] - 1) // res * res + 1
@@ -234,7 +229,6 @@ def data_binning(df, res):
                            as_index=False)[list(df.columns)[4:]].sum()
     binned_df.columns = range(len(binned_df.columns))
     return binned_df
-
 
 def custom_ax_params(ax, sample, max_yval, max_xval):
     """ Set font parameters and axes labels, limits and tick marks. """
@@ -256,7 +250,6 @@ def custom_ax_params(ax, sample, max_yval, max_xval):
     ax.spines['bottom'].set_capstyle('round')
     ax.spines['bottom'].set_position('zero')
     return ax
-
 
 def create_arrow(ax, exons, strand, res, max_yval, dist):
     """ Annotate each plot with arrows representing exons. """
@@ -296,13 +289,12 @@ def create_arrow(ax, exons, strand, res, max_yval, dist):
                      length_includes_head=True, clip_on=False)
     return ax
 
-
 def main():
     args = parse_args(sys.argv[1:])
-    genes, exons, df, out, samples, res, dist = input_params(args)
+    genes, exons, df, out, samples, res, dist, global_ymax = input_params(args)
     df = extract_gene_regions(df, genes, dist)
     df = data_binning(df, res)
-    max_yval = df[list(df.columns)[4:]].max().max()
+    max_yval = df[list(df.columns)[4:]].max().max() if global_ymax else None
     max_xval = max(df[0].value_counts())
     pdf = PdfPages(out)
     for gene, idx in zip(df[0].unique(), range(len(df[0].unique()))):
@@ -312,6 +304,7 @@ def main():
         fig.set_figheight(len(samples))
         fig.set_figwidth(20)
         sample_colors = ['#F3766E', '#1CBDC2']
+        local_max_yval = gene_df[list(gene_df.columns)[4:]].max().max() if not global_ymax else max_yval
         for i in [*range(len(samples))]:
             ax = plt.subplot2grid((len(samples)+1, 20), (i, 0), 
                                   colspan=int(math.ceil(max(gene_df[3]) / 
@@ -319,19 +312,18 @@ def main():
                                   rowspan=1)
             barplt = plt.bar(np.array(gene_df[3]), np.array(gene_df[4+i]), 
                              width=1, color=sample_colors[i])
-            ax = custom_ax_params(ax, samples[i], max_yval, max(gene_df[3]))
+            ax = custom_ax_params(ax, samples[i], local_max_yval, max(gene_df[3]))
             if i == len(samples) - 1:
                 ax = create_arrow(ax, exons[exons[9] == gene_df[0].iloc[0]
                                             ].reset_index(drop=True), 
                                             gene_df[2].iloc[0], res, 
-                                            max_yval, dist)
+                                            local_max_yval, dist)
         fig.suptitle(gene_df[1].iloc[0])
         fig.subplots_adjust(hspace=0)
         fig.tight_layout(h_pad=0)
         pdf.savefig()
         plt.close()
     pdf.close()
-
 
 if __name__ == '__main__':
     main()

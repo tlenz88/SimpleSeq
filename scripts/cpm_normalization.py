@@ -28,6 +28,4 @@ def cpm_normalize():
     print(f"Output saved to {output_file}")
 
 if __name__ == "__main__":
-
-    
     cpm_normalize()

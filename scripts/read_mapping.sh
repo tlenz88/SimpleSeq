@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## Created: February 22, 2024
-## Updated: March 1, 2024
+## Updated: May 25, 2024
 ## Author(s): Todd Lenz, tlenz001@ucr.edu
 
 ## Wrapper for running HTSeq to map BAM reads to genes.
@@ -18,11 +18,12 @@ done
 
 GENOME="$(readlink -f "$GENOME")"
 gff="$(find -L "$GENOME" -mindepth 1 -name "*.gff")"
-gff="/mnt/f/organism_genome/Pfalciparum3D7/PlasmoDB-58_Pfalciparum3D7.gff"
+
 if [[ -z "$gff" ]]; then
     echo "Error: GFF file not found in $GENOME directory."
     exit 1
 fi
+
 if [[ -n $(awk -v search="protein_coding_gene" '$3 == search {print $3}' "$gff") ]]; then
     gene_string="protein_coding_gene"
 else
@@ -43,7 +44,7 @@ if [[ "$bam_count" -ge 1 ]]; then
     if [[ "$bam_count" -eq 0 ]]; then
         echo "Error: Quality filtered & coordinate sorted BAM file(s) not."
         echo "found. Start pipeline from the filtering step or run samtools"
-        echo "view using the args -q $QUALITY -f 0X02 -F 0X04, and then run"
+        echo "view using the args -q $QUALITY -f 0x02 -F 0x04, and then run"
         echo "samtools sort to sort by coordinate (default)."
         exit 1
     fi

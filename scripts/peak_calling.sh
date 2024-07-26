@@ -102,7 +102,7 @@ while IFS= read -r line; do
     bam_format="$(check_bam_type "$bamReads")"
     alg="$(check_alg_type "$line")"
     outdir="$(dirname "$(readlink -f "$bamReads")")"
-    #macs2 callpeak -t "$bamReads" -c "$bamControl" -f "$bam_format" -g "$gsize" -n "$SampleID" -q "$QVALUE" --outdir "$outdir" -B "$alg"
+    macs2 callpeak -t "$bamReads" -c "$bamControl" -f "$bam_format" -g "$gsize" -n "$SampleID" -q "$QVALUE" --outdir "$outdir" -B "$alg"
 done < <(tail -n +2 "$METADATA")
 
 

@@ -11,7 +11,6 @@ chromosome will fill the width of the figure and all other chromosomes
 are proportionally plotted against it.
 """
 
-
 import sys
 import os
 import math
@@ -22,7 +21,6 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-
 
 def parse_args(args):
     parser = argparse.ArgumentParser()
@@ -108,7 +106,6 @@ def parse_args(args):
                         default=None)
     return parser.parse_args()
 
-
 def input_params(args):
     """
     Parse input arguments and load bed files into dataframes. If 
@@ -148,7 +145,6 @@ def input_params(args):
     res = int(args.resolution)
     return genes, centromeres, df, out, samples, res, sample_colors
 
-
 def filter_gff(gff):
     """ Extracts gene accessions, names and descriptions. """
     genes = gff[(gff[2] == 'protein_coding_gene') | (gff[2] == 'ncRNA_gene') | 
@@ -158,9 +154,8 @@ def filter_gff(gff):
     genes[10] = genes[8].str.extract(r'Name=(.*?);', expand=True)
     genes[11] = genes[8].str.extract(r'description=(.*?);', expand=True)
     genes.drop([2,8], axis=1, inplace=True)
-    genes[11] = genes[11].str.replace(r'%2C', ',', regex=True)
+    #genes[11] = genes[11].str.replace(r'%2C', ',', regex=True)
     return genes
-
 
 def extract_genes(genes, gene_list):
     """
@@ -175,7 +170,6 @@ def extract_genes(genes, gene_list):
             list_of_genes.extend(items)
     genes = genes[genes[9].isin(list_of_genes)]
     return genes
-
 
 def check_delimiter(gene_list):
     """ Identify delimiter for list of genes. """
@@ -197,7 +191,6 @@ def check_delimiter(gene_list):
     else:
         print('Can\'t determine delimiter of gene_list.')
 
-
 def normalize_df(df, norm):
     """ Normalize data from BED files. """
     if norm == 'CPM':
@@ -209,7 +202,6 @@ def normalize_df(df, norm):
         exit()
     return df
 
-
 def data_binning(df, res):
     """ Bins read counts for each chromosome. """
     df[len(df.columns)] = df.iloc[:, 1] // res + 1
@@ -219,7 +211,6 @@ def data_binning(df, res):
     df.columns = range(len(df.columns))
     df = df.groupby([0,1], as_index=False)[list(df.columns)[2:]].sum()
     return df
-
 
 def custom_ax_params(ax, sample, max_yval, max_xval):
     """ Set font parameters and axes labels, limits and tick marks. """
@@ -242,7 +233,6 @@ def custom_ax_params(ax, sample, max_yval, max_xval):
     ax.spines['bottom'].set_position('zero')
     return ax
 
-
 def annotate_genes(ax, genes, res, max_yval):
     """ Annotate each plot with bars representing genes. """
     for g in genes.itertuples():
@@ -251,7 +241,6 @@ def annotate_genes(ax, genes, res, max_yval):
                  facecolor='#FF0000', edgecolor='#FF0000', 
                  length_includes_head=True, clip_on=False)
     return ax
-
 
 def annotate_centromeres(ax, centromeres, res, max_yval):
     """ Annotate each plot with bars representing genes. """
@@ -262,14 +251,12 @@ def annotate_centromeres(ax, centromeres, res, max_yval):
                  length_includes_head=True, clip_on=False)
     return ax
 
-
 def main():
     args = parse_args(sys.argv[1:])
     genes, centromeres, df, out, samples, res, sample_colors = input_params(args)
     df = data_binning(df, res)
     if args.ymax:
-        #max_yval = df[list(df.columns)[2:]].max().max()
-        max_yval = 5000
+        max_yval = df[list(df.columns)[2:]].max().max()
     max_xval = max(df[0].value_counts())
     pdf = PdfPages(out)
     num_plots = len(df[0].unique())*(len(samples)+1)
@@ -278,15 +265,11 @@ def main():
     fig = plt.figure()
     fig.set_figheight(num_plots)
     fig.set_figwidth(20)
-    H3K9_yval_list = [1370, 1968, 1912, 1906, 847, 1407, 1962, 2110, 1694, 1678, 1785, 1742, 1703, 666]
-    #input_yval_list = [97, 99, 180, 151, 96, 99, 98, 103, 100, 115, 124, 192, 101, 98]
     y_num = 0
     for chr, idx in zip(df[0].unique(), range(len(df[0].unique()))):
         chr_df = df[df[0] == chr].copy()
         if args.ymax is None:
-            #max_yval = chr_df[list(chr_df.columns)[2:]].max().max()
-            max_yval = H3K9_yval_list[y_num]
-            #max_yval = input_yval_list[y_num]
+            max_yval = chr_df[list(chr_df.columns)[2:]].max().max()
             y_num += 1
         for i in [*range(len(samples))]:
             ax = plt.subplot2grid((num_plots, 20), (plot_range[plot_idx], 0), 
@@ -315,7 +298,6 @@ def main():
     pdf.savefig()
     plt.close()
     pdf.close()
-
 
 if __name__ == '__main__':
     main()

@@ -75,8 +75,9 @@ for (i in c(1, 3, 5, 7)) {
 read_counts <- normalizePath(read_counts)
 countData <- read.csv(read_counts, header = TRUE, sep = "\t")
 metaData <- read.csv(metadata, header = TRUE, sep = "\t")
+colnames(metaData) <- tolower(colnames(metaData))
 if (!(control %in% metaData$group)) {
-  cat(paste("Error: ", control, " not in 'Group' column of metadata\n"))
+  cat(paste("Error: ", control, " not in 'group' column of metadata\n"))
 }
 
 
@@ -96,6 +97,9 @@ findDiff <- function(dds, treatment, control, qval) {
 dds <- suppressWarnings(DESeqDataSetFromMatrix(countData, metaData, ~group, tidy = TRUE))
 dds$group <- relevel(dds$group, ref = control)
 dds <- DESeq(dds)
+normalized_counts <- as.data.frame(counts(dds, normalized = TRUE))
+norm_outfile <- file.path(dirname(read_counts), "normalized_read_counts.txt")
+write.table(normalized_counts, file = norm_outfile, sep = "\t", quote = FALSE, row.names = TRUE, col.names = TRUE)
 
 for (treatment in unique(metaData$group[!grepl(control, metaData$group)])) {
   findDiff(dds, treatment, control, qval)

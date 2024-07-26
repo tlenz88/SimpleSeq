@@ -21,14 +21,14 @@ while getopts ":i:g:o:q:t:" opt; do
 done
 
 # Find file containing adapter sequences
-adapters=$(find -L "$GENOME" -mindepth 1 -name "*adapters*")
+adapters=$(find -L "$GENOME" -mindepth 1 -name "*adapter*")
 if [[ -z "$adapters" ]]; then
     echo "Error: No adapter files found in $GENOME directory." >&2
     exit 1
 fi
 
 # Check the number of FASTQ files and run cutadapt
-read_files=$(find -L "$INPUT" -mindepth 1 \( -name "*.fastq*" -o -name "*.fq*" \))
+read_files=$(find -L "$INPUT" -mindepth 1 \( -name "*.fastq*" -o -name "*.fq*" \) ! -name "*adapter*")
 num_files=$(echo "$read_files" | wc -l)
 if [[ "$num_files" -eq 0 ]]; then
     echo "Error: No FASTQ files found in $INPUT directory." >&2

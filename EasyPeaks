@@ -160,7 +160,7 @@ fi
 ## Check starting step. ##
 ##########################
 STEP="${STEP/^ //}"
-ALL_STEPS=("peak_calling") # "diff_peak_calling") # "TSS_profiling") "plot_chromosomes" "plot_genes")
+ALL_STEPS=("peak_calling" "diff_peak_calling") # "TSS_profiling") "plot_chromosomes" "plot_genes")
 
 if [[ -n $STEP ]]; then
     step="$(echo "$STEP" | tr '[:upper:]' '[:lower:]')"
