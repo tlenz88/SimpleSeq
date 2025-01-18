@@ -6,13 +6,6 @@
 
 ## Performs GO enrichment analysis on output from DESeq2.
 
-suppressPackageStartupMessages({
-  library(topGO)
-  library(dplyr)
-  library(ggplot2)
-  library(ggpubr)
-})
-
 args <- commandArgs(trailingOnly = TRUE)
 
 ShowHelp <- function() {
@@ -31,31 +24,97 @@ if ("--help" %in% args || "-h" %in% commandArgs() || length(commandArgs(trailing
   quit()
 }
 
+###########################################
+## Load packages and install if missing. ##
+###########################################
+required_packages <- c("topGO", "dplyr", "ggplot2", "ggpubr")
+
+# Function to install CRAN packages
+install_cran_packages <- function(packages) {
+    # Identify missing packages
+    missing_packages <- packages[!(packages %in% installed.packages()[, "Package"])]
+    
+    # Install missing CRAN packages
+    if (length(missing_packages) > 0) {
+        message("Installing missing CRAN packages: ", paste(missing_packages, collapse = ", "))
+        install.packages(missing_packages, repos = "https://cloud.r-project.org/")
+    }
+    
+    # Load packages with suppressed messages
+    invisible(lapply(packages, function(pkg) {
+        suppressMessages(require(pkg, character.only = TRUE))
+    }))
+}
+
+# Install CRAN packages
+install_cran_packages(required_packages)
+
+# Install Bioconductor packages
+if (!requireNamespace("BiocManager", quietly = TRUE)) {
+    install.packages("BiocManager", repos = "https://cloud.r-project.org/")
+}
+
+# Function to install missing Bioconductor packages
+install_bioc_packages <- function(packages) {
+    # Identify missing Bioconductor packages
+    missing_packages <- packages[!(packages %in% installed.packages()[, "Package"])]
+    
+    # Install missing Bioconductor packages
+    if (length(missing_packages) > 0) {
+        message("Installing missing Bioconductor packages: ", paste(missing_packages, collapse = ", "))
+        BiocManager::install(missing_packages, update = FALSE, ask = FALSE)
+    }
+}
+
+# Install missing Bioconductor packages
+install_bioc_packages(required_packages)
+
+# Ensure all required packages are loaded with suppressed messages
+invisible(lapply(required_packages, function(pkg) {
+    suppressMessages(requireNamespace(pkg, quietly = TRUE))
+}))
 
 ############################
 ## Check input arguments. ##
 ############################
-for (i in c(1, 3)) {
-  if (!(args[i] %in% c("--DEGenes", "-d", "--map", "-m"))) {
-    cat(paste("Error: ", args[i], "is an invalid argument.\n"))
-    quit()
-  } else if (args[i] == "--DEGenes" || args[i] == "-d") {
-    if (file.exists(args[i + 1])) {
-      setwd(dirname(args[i + 1]))
-      DEGenes <- args[i + 1]
-      outdir <- dirname(DEGenes)
-    } else {
-      cat("Error: Invalid input for DEGenes argument.\n")
+parse_args <- function(args) {
+    parsed <- list()
+    i <- 1
+    while (i <= length(args)) {
+        if (args[i] %in% c("--DEGenes", "-d")) {
+            parsed$DEGenes <- args[i + 1]
+            i <- i + 2
+        } else if (args[i] %in% c("--map", "-m")) {
+            parsed$map <- args[i + 1]
+            i <- i + 2
+        } else {
+            cat("Error: Unknown argument", args[i], "\n")
+            quit(status = 1)
+        }
     }
-  } else if (args[i] == "--map" || args[i] == "-m") {
-    if (file.exists(args[i + 1])) {
-      GO_map <- args[i + 1]
-    } else {
-      cat("Error: Invalid input for MAP argument.\n")
-    }
-  }
+    return(parsed)
 }
 
+parsed_args <- parse_args(args)
+
+###########################
+## Load sample metadata. ##
+###########################
+safe_read_csv <- function(file_path, ...) {
+    tryCatch(
+        {
+            read.csv(file_path, ...)
+        },
+        error = function(e) {
+            cat("Error reading file:", file_path, "\n")
+            cat("Error message:", e$message, "\n")
+            quit(status = 1)
+        }
+    )
+}
+
+DEGenes <- safe_read_csv(parsed_args$DEGenes, header = TRUE, sep = "\t")
+GOmap <- safe_read_csv(parsed_args$map, header = FALSE, sep = "\t")
 
 ############################################################
 ## Function to perform gene ontology enrichment analysis. ##
@@ -87,13 +146,13 @@ GOenrichment <- function(DEGenes, gene_names, GO_map) {
 ################################################
 ## Perform gene ontology enrichment analysis. ##
 ################################################
-GO_map <- readMappings(GO_map)
-gene_names <- names(GO_map)
+GOmap <- readMappings(GOmap)
+gene_names <- names(GOmap)
 DEGenes <- read.csv(DEGenes, head = TRUE, sep = "\t")
 DEGenes_pos <- DEGenes[which(DEGenes$log2FoldChange > 0), ]
 DEGenes_neg <- DEGenes[which(DEGenes$log2FoldChange < 0), ]
-GO_results_pos <- GOenrichment(DEGenes_pos, gene_names, GO_map)
-GO_results_neg <- GOenrichment(DEGenes_neg, gene_names, GO_map)
+GO_results_pos <- GOenrichment(DEGenes_pos, gene_names, GOmap)
+GO_results_neg <- GOenrichment(DEGenes_neg, gene_names, GOmap)
 write.table(GO_results_pos,
   file = file.path(outdir, "upregulated_GO_enrichment.txt"),
   sep = "\t",

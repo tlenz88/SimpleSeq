@@ -11,16 +11,13 @@ import csv
 
 def bed_to_wig(bed_file):
     wig_file = bed_file.replace('.bed', '.wig')
-    read_num = ['track type=wiggle_0 name=track_label']
-    
-    with open(bed_file, 'r') as bed:
-        for row in csv.reader(bed, delimiter='\t'):
-            if row[1] == '1':
-                read_num.append(f'fixedStep chrom={row[0]} start=1 step=1')
-            read_num.append(row[2])
-    
     with open(wig_file, 'w') as wig:
-        wig.write('\n'.join(read_num))
+        wig.write('track type=wiggle_0 name=track_label')
+        with open(bed_file, 'r') as bed:
+            for row in csv.reader(bed, delimiter='\t'):
+                if row[1] == '1':
+                    wig.write(f'fixedStep chrom={row[0]} start=1 step=1')
+                wig.write(row[2] + '\n')
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

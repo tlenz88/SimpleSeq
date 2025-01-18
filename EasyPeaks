@@ -160,7 +160,7 @@ fi
 ## Check starting step. ##
 ##########################
 STEP="${STEP/^ //}"
-ALL_STEPS=("peak_calling" "diff_peak_calling") # "TSS_profiling") "plot_chromosomes" "plot_genes")
+ALL_STEPS=("peak_calling" "diff_peak_calling") #"plot_chromosomes" "plot_genes")
 
 if [[ -n $STEP ]]; then
     step="$(echo "$STEP" | tr '[:upper:]' '[:lower:]')"
@@ -168,7 +168,6 @@ if [[ -n $STEP ]]; then
     case "$step" in
         "peak_calling") FILTERED_STEPS=("${ALL_STEPS[@]}");;
         "diff_peak_calling") FILTERED_STEPS=("${ALL_STEPS[@]:1}");;
-        "TSS_profiling") FILTERED_STEPS=("${ALL_STEPS[@]:2}");;
         *) echo "Invalid step: $step"; exit 1;;
     esac
 else
@@ -188,7 +187,7 @@ function peak_calling() {
     done
     echo "Performing peak calling."
     echo "---------------------------------------------------------------------"
-    "$SCRIPTS"/peak_calling.sh -m "$METADATA" -g "$GENOME" -q "$QVALUE" >> "$log_dir"/"$step".log 2>&1
+    "$SCRIPTS"/peak_calling.sh -m "$METADATA" -g "$GENOME" -q "$QVALUE" #>> "$log_dir"/"$step".log 2>&1
 }
 
 
@@ -202,27 +201,7 @@ function diff_peak_calling() {
     fi
     echo "Finding differential peaks."
     echo "-----------------------------------------------------------------"
-    Rscript "$SCRIPTS"/diff_peak_calling.R -m "$METADATA" -c "$CONTROL" >> "$log_dir"/"$step".log 2>&1
-}
-
-
-function TSS_profiling() {
-    if ! command -v "deeptools" &> /dev/null; then
-        "$SCRIPTS"/package_installer.sh "deeptools"
-    fi
-    echo "Performing TSS coverage profiling."
-    echo "---------------------------------------------------------------------"
-    "$SCRIPTS"/TSS_coverage.sh -i "$METADATA" -t "$THREADS" >> "$log_dir"/"$step".log 2>&1
-}
-
-
-function plot_chromosomes() {
-    echo
-}
-
-
-function plot_genes() {
-    echo
+    Rscript "$SCRIPTS"/diff_peak_calling.R -m "$METADATA" -c "$CONTROL" #>> "$log_dir"/"$step".log 2>&1
 }
 
 

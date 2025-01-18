@@ -16,7 +16,8 @@ with open(sys.argv[1], 'r') as file:
     csv_reader = csv.reader(file, delimiter='\t')
     for row in csv_reader:
         if len(row) >= 17:
-            gene = row[1]
+            gene = row[2]
+            print(gene)
             GO = row[4]
             gene_to_GO[gene].add(GO)
 

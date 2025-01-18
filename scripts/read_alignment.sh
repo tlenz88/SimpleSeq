@@ -61,11 +61,13 @@ if [[ "$num_files" -eq 0 ]]; then
 elif [[ "$num_files" -eq 1 ]]; then
     fq_r1=$(echo "$read_files")
     out_prefix="$OUTPUT/$(basename "$(dirname "$fq_r1")")/$(basename "${fq_r1%%.*}")"
-    "${alignment_tool}" -x "$bname" -1 "$fq_r1" -S "${out_prefix}_aligned.sam" -p "$THREADS" --very-sensitive
+    echo "${alignment_tool}" -x "$bname" -U "$fq_r1" -S "${out_prefix}_aligned.sam" -p "$THREADS" --very-sensitive
+    "${alignment_tool}" -x "$bname" -U "$fq_r1" -S "${out_prefix}_aligned.sam" -p "$THREADS" --very-sensitive
 else
     fq_r1=$(echo "$read_files" | grep '_R1')
     fq_r2="${fq_r1/_R1/_R2}"
     out_prefix="$OUTPUT/$(basename "$(dirname "$fq_r1")")/$(basename "${fq_r1%_*}")"
     sam_prefix="${out_prefix/_R1/}"
+    echo "${alignment_tool}" -x "$bname" -1 "$fq_r1" -2 "$fq_r2" -S "${sam_prefix}_aligned.sam" -p "$THREADS" --very-sensitive
     "${alignment_tool}" -x "$bname" -1 "$fq_r1" -2 "$fq_r2" -S "${sam_prefix}_aligned.sam" -p "$THREADS" --very-sensitive
 fi

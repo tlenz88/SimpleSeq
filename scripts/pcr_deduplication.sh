@@ -45,6 +45,7 @@ if [[ "$num_files" -eq 0 ]]; then
     exit 1
 elif [[ "$num_files" -eq 1 ]]; then
     out_prefix="$OUTPUT/$(basename "$(dirname "$sam_file")")/$(basename "${sam_file%%.*}")"
+    echo "$dedup_command" MarkDuplicates -I "$sam_file" -O "${out_prefix}_dedup.sam" -M "${out_prefix}_dedup_metrics.txt" -ASO queryname
     "$dedup_command" MarkDuplicates -I "$sam_file" -O "${out_prefix}_dedup.sam" -M "${out_prefix}_dedup_metrics.txt" -ASO queryname
 else
     echo "Error: Multiple SAM files found in the $INPUT directory." >&2

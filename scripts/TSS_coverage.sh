@@ -6,54 +6,83 @@
 
 ## Wrapper for running deeptools.
 
-while getopts ":m:t:q:" opt; do
+print_help() {
+    echo "Usage: TSS_coverage.sh [options]"
+    echo ""
+    echo "Options:"
+    echo "  -m <metadata_file>    Specify the metadata file."
+    echo "  -t <threads>          Specify the number of threads to use (default=1)."
+    echo "  -g <gtf_file>         Specify the GTF file." 
+    echo "  -b <binsize>          Specify the bin size for bamCompare (default=1000)."
+    echo "  -h, --help            Show this help message and exit."
+}
+
+THREADS=1
+BINSIZE=1000
+
+while getopts ":m:t:g:b:h:" opt; do
     case $opt in
-        m) METADATA="$OPTARG";;
-        t) THREADS="$OPTARG";;
+        m) METADATA="$OPTARG";; ## ChIP metadata file containing file names/paths
+        t) THREADS="$OPTARG";; ## Number of processor threads
+        g) GTF="$OPTARG";; ## GTF file containing genes of interest
+        b) BINSIZE="$OPTARG";; ## Binsize for plotting
+        h|*) 
+            print_help
+            exit 0
+            ;;
         *) echo "Error: '$OPTARG' is an invalid argument."
     esac
 done
-
-
-function check_BAM() {
-    bamfile="$data_dir/$1"
-    if [[ $(samtools view --rf 0x400  "$bamfile" | head -n 1 | wc -l) -eq 0 ]]; then
-        echo "The BAM file $(basename $bamfile) has not been PCR deduplicated."
-        echo "It is recommended that users run picard MarkDuplicates prior to"
-        echo "performing peak calling."
-    elif [[ $(samtools view -H "$bamfile" | grep -E '^@PG.*-f\s*0X02\s*-F\s*0X04' | head -n 1 | wc -l) -eq 0 ]]; then
-        echo "The BAM file $(basename $bamfile) has not been quality filtered."
-        echo "It is recommended that users run samtools view using the args"
-        echo "-q 30 -f 0X02 -F 0X04 prior to performing peak calling."
-    elif [[ $(samtools view -H "$bamfile" | grep -E '^@HD.*SO:coordinate' | head -n 1 | wc -l) -eq 0 ]]; then
-        echo "Error: The BAM file $(basename $bamfile) has not been coordinate"
-        echo "sorted, which is required to run macs3 callpeak. Run samtools"
-        echo "sort to sort by coordinate (default)."
-        exit 1
-    fi
-}
-
-
+: '
 unique_values=$(awk 'NR > 1 { print $3 }' "$METADATA" | sort -u)
-for value in $unique_values; do
-    bamReads="$(awk -v prefix="$data_dir/" '$3 == $value { print prefix $5 }' "$METADATA")"
-    bamControl="$(awk -v prefix="$data_dir/" '$3 == $value { print prefix $7 }' "$METADATA")"
-    outdir="$OUTPUT/$(basename "$(dirname "$(readlink -f "$tfq_r1")")")/$(basename "${tfq_r1%*}")"
-    {
-        samtools merge -@ 18 "$output_dir"/"${value%%.*}"_target.bam "$bamReads"
-        samtools index -@ 18 "$output_dir"/"${value%%.*}"_target.bam
-        samtools merge -@ 18 "$output_dir"/"${value%%.*}"_control.bam "$bamControl"
-        samtools index -@ 18 "$output_dir"/"${value%%.*}"_control.bam
-        bamCompare -b1 "$output_dir"/"${value%%.*}"_target.bam \
-		-b2 "$output_dir"/"${value%%.*}"_control.bam \
-		--outFileName "$output_dir"/"${value%%.*}".bw \
-		--scaleFactorsMethod None \
-		--normalizeUsing RPKM \
-		--operation subtract \
-		-bs 1 \
-		--ignoreDuplicates \
-		-p "$THREADS"
-    } 
+echo "$unique_values" | while IFS= read -r value; do
+    bamReads=$(awk -v val="$value" '$3 == val { print $5 }' "$METADATA" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+    read -r -a bamReadsArray <<< "$bamReads"
+    bamControl=$(awk -v val="$value" '$3 == val { print $7 }' "$METADATA" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+    read -r -a bamControlArray <<< "$bamControl"
+    outdir=$(dirname "$(echo "$bamReads" | awk '{print $1}')")
+
+    target_bam="${value%%.*}_target.bam"
+    control_bam="${value%%.*}_control.bam"
+
+    if [ ! -f "$target_bam" ]; then
+        if [ "${#bamReadsArray[@]}" -gt 0 ]; then
+            samtools merge -@ "$THREADS" "$target_bam" "${bamReadsArray[@]}"
+            samtools index -@ "$THREADS" "$target_bam"
+        fi
+    else
+        echo "$target_bam already exists, skipping merging for target."
+    fi
+
+    if [ ! -f "$control_bam" ]; then
+        if [ "${#bamControlArray[@]}" -gt 0 ]; then
+            samtools merge -@ "$THREADS" "$control_bam" "${bamControlArray[@]}"
+            samtools index -@ "$THREADS" "$control_bam"
+        fi
+    else
+        echo "$control_bam already exists, skipping merging for control."
+    fi
+
+    bigwig_file="${value%%.*}.bw"
+    if [ -f "$target_bam" ] && [ -f "$control_bam" ]; then
+        if [ ! -f "$bigwig_file" ]; then
+            bamCompare -b1 "$target_bam" \
+            -b2 "$control_bam" \
+            --outFileName "$bigwig_file" \
+            --scaleFactorsMethod None \
+            --normalizeUsing RPKM \
+            --operation subtract \
+            -bs "$BINSIZE" \
+            --ignoreDuplicates \
+            -p "$THREADS"
+        else
+            echo "$bigwig_file already exists."
+        fi
+    else
+        echo "Skipping bamCompare because one or both BAM files do not exist."
+    fi
 done
-computeMatrix reference-point -S "$data_dir"/*.bw -R "$gtf" -o "$data_dir"/TSS_coverage.matrix -b 500 -a 1500 -bs 1 -p "$THREADS" >> "$log_dir"/TSS_coverage.log 2>&1
-plotProfile -m "$data_dir"/TSS_coverage.matrix -o "$fig_dir"/TSS_coverage_profile.pdf --perGroup >> "$log_dir"/TSS_coverage.log 2>&1
+: '
+computeMatrix reference-point -S *.bw -R "$GTF" -o AP2_TSS_coverage.matrix -b 1000 -a 1000 -bs "$BINSIZE" -p "$THREADS"
+plotHeatmap -m AP2_TSS_coverage.matrix -o AP2_TSS_coverage_heatmap.pdf
+plotProfile -m AP2_TSS_coverage.matrix -o AP2_TSS_coverage_profile.pdf --perGroup

@@ -8,16 +8,16 @@
 
 function help {
     echo
-    echo "usage : SimpleSeq.sh -i INPUT -m METADATA [-q QVALUE] [-h]"
+    echo "usage : SimpleSeq.sh -r READ_COUNTS -m METADATA [-q QVALUE] [-h]"
     echo "---------------------------------------------------------------------"
     echo " Required inputs:"
-    echo "  -i|--input INPUT       : Input read counts file."
-    echo "  -m|--metadata METADATA : Metadata file."
-    echo "  -c|--control CONTROL   : Control group."
+    echo "  -r|--read_counts READ_COUNTS : Read counts file."
+    echo "  -m|--metadata METADATA       : Metadata file."
+    echo "  -c|--control CONTROL         : Control group."
     echo
     echo " Optional inputs:"
-    echo "  -q|--qvalue QVALUE     : q-value cutoff."
-    echo "  -h|--help HELP         : Show help message."
+    echo "  -q|--qvalue QVALUE           : q-value cutoff."
+    echo "  -h|--help HELP               : Show help message."
     echo "---------------------------------------------------------------------"
     echo
     exit 0;
@@ -29,7 +29,7 @@ function help {
 #############################
 for arg in "$@"; do
     case "$arg" in
-        "--input") set -- "$@" "-i" ;;
+        "--read_counts") set -- "$@" "-r" ;;
         "--metadata") set -- "$@" "-m" ;;
         "--control") set -- "$@" "-c" ;;
         "--qvalue") set -- "$@" "-q" ;;
@@ -46,9 +46,9 @@ fi
 pipedir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 SCRIPTS="$pipedir"/scripts
 
-while getopts ":i:m:c:q:h:" opt; do
+while getopts ":r:m:c:q:h:" opt; do
     case $opt in
-        i) INPUT="$OPTARG";;
+        r) READ_COUNTS="$OPTARG";;
         m) METADATA="$OPTARG";;
         c) CONTROL="$OPTARG";;
         q) QVALUE="$OPTARG";;
@@ -61,11 +61,11 @@ done
 ############################
 ## Check input arguments. ##
 ############################
-if [[ -z "$INPUT" ]]; then
-    echo "Error: Input argument required."
+if [[ -z "$READ_COUNTS" ]]; then
+    echo "Error: Read_counts argument required."
     exit 1
-elif [[ ! -e "$INPUT" ]]; then
-    echo "Error: Input file not found."
+elif [[ ! -e "$READ_COUNTS" ]]; then
+    echo "Error: Read_counts file not found."
     exit 1
 elif [[ -z "$METADATA" ]]; then
     echo "Error: Metadata argument required."
@@ -89,41 +89,21 @@ if [[ -z $QVALUE ]]; then
     QVALUE=0.05
 fi
 
-
-##########################################################
-## Compare sample names in metadata file to input file. ##
-##########################################################
-sample_names=$(cut -f1 "$METADATA" | tail -n +2 | tr -d '\r')
-sorted_sample_names=$(echo "$sample_names" | sort | tr '\n' '\t' | sed 's/\t$//')
-
-input_header=$(head -n 1 "$INPUT" | tr -d '\r')
-sorted_input_header=$(echo "$input_header" | cut -f2- | tr '\t' '\n' | sort | tr '\n' '\t' | sed 's/\t$//')
-
-if [[ $(echo "$input_header" | cut -f1) != "Gene_ID" ]]; then
-    echo "Error: 'Gene_ID' string not found in header of $(basename $INPUT)."
-    exit 1
-elif [[ "$sorted_sample_names" != "$sorted_input_header" ]]; then
-    echo "Error: Sample names in $(basename $INPUT) header do not match names in $(basename $METADATA)."
-    exit 1
-fi
-
-
 #############################################################
 ## Check number of sample groups and replicates per group. ##
 #############################################################
 awk 'NR > 1 { counts[$2]++ } END {for (string in counts) {
     if (counts[string] < 2) {
         print "Error: " string " appears to have only 1 replicate."
-        print "Two replicates per group are required to perform DGE."
+        print "Two replicates per group are required to perform DGE analysis."
         exit 1
         }
     if (length(counts) < 2) {
         print "Error: There is only 1 group name found."
-        print "Two unique groups are required to perform DGE."
+        print "Two unique groups are required to perform DGE analysis."
         exit 1
         }
     }
 }' "$METADATA"
 
-
-Rscript "$SCRIPTS"/differential_expression.R -r "$INPUT" -m "$METADATA" -c "$CONTROL" -q "$QVALUE"
+Rscript "$SCRIPTS"/differential_expression.R -r "$READ_COUNTS" -m "$METADATA" -c "$CONTROL" -g "$GENE_LIST" -q "$QVALUE"

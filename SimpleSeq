@@ -326,12 +326,12 @@ function mapping() {
         done
         count_files=("$OUTPUT"/*/*_counts.txt)
         read_counts="${count_files[0]}"
-        cut -f1 "$read_counts" > read_counts.txt
+        cut -f1 "$read_counts" > "$OUTPUT"/read_counts.txt
         for cf in "${count_files[@]}"; do
-            paste read_counts.txt <(cut -f2- "$cf") > merged.tmp && mv merged.tmp read_counts.txt
+            paste "$OUTPUT"/read_counts.txt <(cut -f2- "$cf") > merged.tmp && mv merged.tmp "$OUTPUT"/read_counts.txt
         done
         header=$(printf "Gene_ID\t%s\n" "$(basename -a "${count_files[@]%%.*}")" | tr '\n' '\t' | sed 's/\t$/\n/')
-        { echo "$header"; cat read_counts.txt; } > merged.tmp && mv merged.tmp read_counts.txt
+        { echo "$header"; cat "$OUTPUT"/read_counts.txt; } > merged.tmp && mv merged.tmp "$OUTPUT"/read_counts.txt
     else
         if [[ "$STEP" = "$fs" ]]; then
             if ! command -v samtools &> /dev/null; then
