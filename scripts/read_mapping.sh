@@ -24,8 +24,8 @@ if [[ -z "$gff" ]]; then
     exit 1
 fi
 
-if [[ -n $(awk -v search="protein_coding_gene" '$3 == search {print $3}' "$gff") ]]; then
-    gene_string="protein_coding_gene"
+if [[ -n $(awk -v search="gene" '$3 == search {print $3}' "$gff") ]]; then
+    gene_string="ncRNA"
 else
     gene_string="gene"
 fi
@@ -34,9 +34,9 @@ bam_count=$(find -L "$INPUT" -mindepth 1 -name "*.bam" | wc -l)
 if [[ "$bam_count" -ge 1 ]]; then
     sbam=$(find -L "$INPUT" -mindepth 1 -name "*.bam")
     for bfile in $sbam; do
-        if samtools view -H "$bfile" | grep -E '^@PG.*-f\s*0x02\s*-F\s*0x04' && samtools view -H "$bfile" | grep -E '^@HD.*SO:coordinate'; then
+        if samtools view -H "$bfile" | grep -E '^@PG.*-F\s*0X04' && samtools view -H "$bfile" | grep -E 'samtools sort'; then #'^@HD.*SO:coordinate'; then
             stxt="$OUTPUT/$(basename "$(dirname "$(readlink -f "$bfile")")")/$(basename "${bfile%%.*}")"
-            htseq-count -s reverse -t "$gene_string" -i ID "$bfile" "$gff" -n "$THREADS" >> "${stxt}_counts.txt"
+            htseq-count -s reverse -t gene -i ID "$bfile" "$gff" -n "$THREADS" --nonunique all >> "${stxt}_counts_gene_reverse_stranded.txt"
         else
             ((bam_count--))
         fi

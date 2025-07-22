@@ -8,11 +8,12 @@
 
 function help {
     echo
-    echo "usage : SimpleSeq.sh -i INPUT -g GENOME [-o OUTPUT] [-s STEP] [-q QUALITY] [-t THREADS] [-c] [-r] [-h]"
-    echo "---------------------------------------------------------------------"
+    echo "usage : SimpleSeq.sh -i INPUT -g GENOME [-o OUTPUT] [-s STEP]"
+    echo "                     [-q QUALITY] [-t THREADS] [-c] [-r] [-h]"
+    echo "--------------------------------------------------------------"
     echo " Required inputs:"
     echo "  -i|--input  INPUT    : Input data folder."
-    echo "  -g|--genome GENOM    : Directory containing genome files."
+    echo "  -g|--genome GENOME   : Directory containing genome files."
     echo
     echo " Optional inputs:"
     echo "  -o|--output OUTPUT   : Output folder."
@@ -20,16 +21,16 @@ function help {
     echo "         quality_check : Initial quality check."
     echo "              trimming : Adapter trimming."
     echo "             alignment : Read alignment."
-    echo "         deduplication : Remove PCR duplicates (for ChIP-seq)."
     echo "             filtering : Filtering low-quality reads."
     echo "               sorting : Sorting reads by coordinate."
+    echo "         deduplication : Remove PCR duplicates (for ChIP-seq)."
     echo "               mapping : Mapping reads to each gene/base pair."
     echo "  -q|--quality QUALITY : Phred quality score for filtering."
     echo "  -t|--threads THREADS : Processor threads."
     echo "  -c|--chip CHIP       : Samples are from ChIP-seq experiment."
     echo "  -r|--remove REMOVE   : Remove intermediate files."
     echo "  -h|--help HELP       : Show help message."
-    echo "---------------------------------------------------------------------"
+    echo "--------------------------------------------------------------"
     echo
     exit 0;
 }
@@ -143,7 +144,7 @@ fi
 ## Check starting step. ##
 ##########################
 STEP="${STEP/^ //}"
-ALL_STEPS=("quality_check" "trimming" "alignment" "deduplication" "filtering" "sorting" "mapping")
+ALL_STEPS=("quality_check" "trimming" "alignment" "filtering" "sorting" "deduplication" "mapping")
 
 if [[ -n $STEP ]]; then
     step="$(echo "$STEP" | tr '[:upper:]' '[:lower:]')"
@@ -152,9 +153,9 @@ if [[ -n $STEP ]]; then
         "quality_check") FILTERED_STEPS=("${ALL_STEPS[@]}");;
         "trimming") FILTERED_STEPS=("${ALL_STEPS[@]:1}");;
         "alignment") FILTERED_STEPS=("${ALL_STEPS[@]:2}");;
-        "deduplication") FILTERED_STEPS=("${ALL_STEPS[@]:3}");;
-        "filtering") FILTERED_STEPS=("${ALL_STEPS[@]:4}");;
-        "sorting") FILTERED_STEPS=("${ALL_STEPS[@]:5}");;
+        "filtering") FILTERED_STEPS=("${ALL_STEPS[@]:3}");;
+        "sorting") FILTERED_STEPS=("${ALL_STEPS[@]:4}");;
+        "deduplication") FILTERED_STEPS=("${ALL_STEPS[@]:5}");;
         "mapping") FILTERED_STEPS=("${ALL_STEPS[@]:6}");;
         *) echo "Invalid step: $step" >&2
            exit 1
@@ -227,31 +228,6 @@ function alignment() {
 }
 
 
-function deduplication() {
-    if [[ "$STEP" != "$fs" ]]; then
-        INPUT="$OUTPUT"
-    fi
-    echo "Running Picartools to remove PCR duplicates."
-    echo "---------------------------------------------------------------------"
-    for i in "$INPUT"/*; do
-        if [[ -d "$i" && "$i" != "$log_dir" ]]; then
-            basename "$i"
-            "$SCRIPTS"/pcr_deduplication.sh -i "$i" -o "$OUTPUT" >> "$log_dir"/"$fs".log 2>&1
-            if [[ -n "$REMOVE" ]]; then
-                find -L "$i" -mindepth 1 -name "*.sam" | while IFS= read -r s; do
-                    if grep -q 'XT:A:U' "$s"; then
-                        :
-                    else
-                        rm -f "$s"
-                    fi
-                done
-            fi
-        fi
-    done
-    echo
-}
-
-
 function filtering() {
     if [[ -n "$CHIP" ]]; then
         alignment_flag="-c"
@@ -282,13 +258,18 @@ function filtering() {
 
 
 function sorting() {
+    if [[ -n "$CHIP" ]]; then
+        alignment_flag="-c"
+    else
+        alignment_flag=""
+    fi
     if [[ "$STEP" = "$fs" ]]; then
         INPUT="$OUTPUT"
         if ! command -v samtools &> /dev/null; then
             "$SCRIPTS"/package_installer.sh samtools
         fi
     fi
-    echo "Running Samtools to sort and index reads."
+    echo "Running Samtools to sort reads."
     echo "---------------------------------------------------------------------"
     local samtools_step="sorting"
     for i in "$INPUT"/*; do
@@ -301,6 +282,35 @@ function sorting() {
                 else
                     rm -f "$(find -L "$i" -mindepth 1 -name "$i")"
                 fi
+            fi
+        fi
+    done
+    echo
+}
+
+
+function deduplication() {
+    if [[ "$STEP" = "$fs" ]]; then
+        INPUT="$OUTPUT"
+        if ! command -v samtools &> /dev/null; then
+            "$SCRIPTS"/package_installer.sh samtools
+        fi
+    fi
+    echo "Running Samtools to remove PCR duplicates."
+    echo "---------------------------------------------------------------------"
+    local samtools_step="deduplication"
+    for i in "$INPUT"/*; do
+        if [[ -d "$i" && "$i" != "$log_dir" ]]; then
+            basename "$i"
+            "$SCRIPTS"/samtools_wrapper.sh -i "$i" -s "$samtools_step" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
+            if [[ -n "$REMOVE" ]]; then
+                find -L "$i" -mindepth 1 -name "*.bam" | while IFS= read -r s; do
+                    if grep -q 'XT:A:U' "$s"; then
+                        :
+                    else
+                        rm -f "$s"
+                    fi
+                done
             fi
         fi
     done
@@ -321,7 +331,7 @@ function mapping() {
         for i in "$INPUT"/*; do
             if [[ -d "$i" && "$i" != "$log_dir" ]]; then
                 basename "$i"
-                "$SCRIPTS"/read_mapping.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
+                #"$SCRIPTS"/read_mapping.sh -i "$i" -g "$GENOME" -o "$OUTPUT" -t "$THREADS" >> "$log_dir"/"$fs".log 2>&1
             fi
         done
         count_files=("$OUTPUT"/*/*_counts.txt)

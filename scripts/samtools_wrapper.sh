@@ -20,9 +20,9 @@ while getopts ":i:s:o:q:t:c" opt; do
            exit 1;;
     esac
 done
-: << EOF
+
 if [[ $# -eq 0 ]]; then
-    echo "Check input arguments and retry."
+    echo "Check input arguments and retry." >&2
     exit 1
 fi
 
@@ -31,16 +31,17 @@ if [[ -z "$INPUT" || -z "$STEP" || -z "$OUTPUT" ]]; then
     echo "Error: Missing required arguments." >&2
     exit 1
 fi
-EOF
+
 # Find SAM/BAM files based on the step
 if [[ "$STEP" == "filtering" ]]; then
     file_ext=".sam"
-elif [[ "$STEP" == "sorting" || "$STEP" == "mapping" ]]; then
+elif [[ "$STEP" == "sorting" || "$STEP" == "deduplication" || "$STEP" == "mapping" ]]; then
     file_ext=".bam"
 else
     echo "Error: Invalid step specified." >&2
     exit 1
 fi
+
 input_files=()
 while IFS= read -r -d '' file; do
     input_files+=("$file")
@@ -48,59 +49,67 @@ done < <(find -L "$INPUT" -mindepth 1 -name "*$file_ext" -print0)
 
 # Process SAM/BAM files based on the step
 for input_file in "${input_files[@]}"; do
-    # Filters SAM file
+    bam_prefix="$OUTPUT/$(basename "$(dirname "$input_file")")/$(basename "${input_file%%.*}")"
+    if [[ "$(samtools view -c -f 1 "$input_file")" -gt 0 ]]; then
+        samflags="-f 0X02 -F 0X04"
+    else
+        samflags="-F 0X04"
+    fi
+
+    # Quality filters SAM file and converts to BAM
     if [[ "$STEP" == "filtering" ]]; then
-        echo "Quality filtering $input_file using samtools" >&2
-        bam_prefix="$OUTPUT/$(basename "$(dirname "$input_file")")/$(basename "${input_file%%.*}")"
-        num_files=$(echo "$input_file" | wc -l)
-        if [[ "$num_files" -eq 1 ]]; then
-            samflags="-F 0X04"
-        elif [[ "$num_files" -eq 1 ]]; then
-            samflags="-f 0X02 -F 0X04"
-        fi
-        if [[ -z "$CHIP" ]]; then
-            samtools view -@ "$THREADS" -q "$QUALITY" "$samflags" -b "$input_file" -o "${bam_prefix}.bam"
-        else
-            if samtools view -H "$input_file" | grep -qE '^@PG.*ID:MarkDuplicates'; then
-                samtools view -@ "$THREADS" -q "$QUALITY" "$samflags" -b "$input_file" -o "${bam_prefix}.bam"
-            else
-                echo "Error: SAM file must be deduplicated before filtering ChIP-seq data." >&2
-                continue
-            fi
-        fi
-    
+        echo "Quality filtering $bam_prefix using samtools." >&2
+        echo "samtools view -@ "$THREADS" -q "$QUALITY" "$samflags" -b "$input_file" -o "${bam_prefix}.bam""
+        samtools view -@ "$THREADS" -q "$QUALITY" "$samflags" -b "$input_file" -o "${bam_prefix}.bam"
+
     # Sorts BAM file by coordinate
     elif [[ "$STEP" == "sorting" ]]; then
-        echo "Sorting $input_file by coordinate using samtools" >&2
-        #if samtools view -H "$input_file" | grep -qE '^@PG.*-f\s*0x02\s*-F\s*0x04'; then
-        bam_prefix="$OUTPUT/$(basename "$(dirname "$input_file")")/$(basename "${input_file%%.*}")"
-        if [[ -z "$CHIP" ]]; then
-            samtools sort -@ "$THREADS" "$input_file" -o "${bam_prefix}_sorted.bam"
-            samtools stats -@ "$THREADS" -d -x "${bam_prefix}_sorted.bam" > "${bam_prefix}_stats.txt"
-            samtools index -@ "$THREADS" -b "${bam_prefix}_sorted.bam"
+        echo "Sorting $bam_prefix using samtools." >&2
+        if ! samtools view -H "$input_file" | grep -qE "^@PG.*${samflags}"; then
+            echo "Error: BAM file must be quality filtered before sorting." >&2
         else
-            if ! samtools view -H "$input_file" | grep -qE '^@PG.*ID:MarkDuplicates'; then
-                echo "Error: BAM files must be deduplicated and quality filtered before sorting ChIP-seq data." >&2
-                continue
-            else
-                samtools sort -@ "$THREADS" "$input_file" -o "${bam_prefix}_sorted.bam"
-                samtools stats -@ "$THREADS" -d -x "${bam_prefix}_sorted.bam" > "${bam_prefix}_stats.txt"
+            if [ "$CHIP" != true ]; then
+                echo "samtools sort -@ "$THREADS" -o "${bam_prefix}_sorted.bam" "$input_file""
+                samtools sort -@ "$THREADS" -o "${bam_prefix}_sorted.bam" "$input_file"
+                echo "samtools index -@ "$THREADS" -b "${bam_prefix}_sorted.bam""
                 samtools index -@ "$THREADS" -b "${bam_prefix}_sorted.bam"
+                echo "samtools stats -@ "$THREADS" -d -x "${bam_prefix}_sorted.bam" > "${bam_prefix}_sorted_stats.txt""
+                samtools stats -@ "$THREADS" -d -x "${bam_prefix}_sorted.bam" > "${bam_prefix}_sorted_stats.txt"
+            else
+                echo "samtools sort -n -@ "$THREADS" -o "${bam_prefix}_sorted.bam" "$input_file""
+                samtools sort -n -@ "$THREADS" -o "${bam_prefix}_sorted.bam" "$input_file"
             fi
         fi
-        #else
-        #    echo "Error: BAM files must be quality filtered before sorting." >&2
-        #    exit 1
-        #fi
-    
+
+    elif [[ "$STEP" == "deduplication" ]]; then
+        echo "Deduplicating $bam_prefix using samtools." >&2
+        if ! samtools view -H "$input_file" | grep -qE "^@PG.*${samflags}" ||
+           ! samtools view -H "$input_file" | grep -qE '^@PG.*samtools sort'; then
+            echo "Error: BAM file must be quality filtered and coordinate sorted prior to deduplication." >&2
+        else
+            echo "samtools fixmate -@ "$THREADS" -m "$input_file" "${bam_prefix}_fixmate.bam""
+            samtools fixmate -@ "$THREADS" -m "$input_file" "${bam_prefix}_fixmate.bam"
+            echo "samtools sort -@ "$THREADS" -o "${bam_prefix}_fixmate_sorted.bam" "${bam_prefix}_fixmate.bam""
+            samtools sort -@ "$THREADS" -o "${bam_prefix}_fixmate_sorted.bam" "${bam_prefix}_fixmate.bam"
+            echo "samtools markdup -@ "$THREADS" -r "${bam_prefix}_fixmate_sorted.bam" "${bam_prefix}_fixmate_sorted_dedup.bam""
+            samtools markdup -@ "$THREADS" -r "${bam_prefix}_fixmate_sorted.bam" "${bam_prefix}_fixmate_sorted_dedup.bam"
+            echo "samtools index -@ "$THREADS" -b "${bam_prefix}_fixmate_sorted_dedup.bam""
+            samtools index -@ "$THREADS" -b "${bam_prefix}_fixmate_sorted_dedup.bam"
+            echo "samtools stats -@ "$THREADS" -d -x "${bam_prefix}_fixmate_sorted_dedup.bam" > "${bam_prefix}_fixmate_sorted_dedup_stats.txt""
+            samtools stats -@ "$THREADS" -d -x "${bam_prefix}_fixmate_sorted_dedup.bam" > "${bam_prefix}_fixmate_sorted_dedup_stats.txt"
+        fi
+
     # Finds per-base coverage of BAM file
     elif [[ "$STEP" == "mapping" ]]; then
-        echo "Mapping genome-wide coverage of $input_file" >&2
-        if ! samtools view -H "$input_file" | grep -qE '^@HD.*SO:coordinate' || 
-           ! samtools view -H "$input_file" | grep -qE '^@PG.*-F\s*0x04' ||
-           ! samtools view -H "$input_file" | grep -qE '^@PG.*ID:MarkDuplicates'; then
-            echo "Error: BAM files must be deduplicated, quality filtered, and coordinate sorted prior to mapping." >&2
+        echo "Mapping genome-wide coverage of $bam_prefix using samtools." >&2
+        if ! samtools view -H "$input_file" | grep -qE "^@PG.*${samflags}" ||
+           ! samtools view -H "$input_file" | grep -qE '^@PG.*samtools sort'; then
+            echo "Error: BAM file must be quality filtered and coordinate sorted prior to mapping." >&2
         else
+            if [ "$CHIP" != true ] && 
+               ! samtools view -H "$input_file" | grep -qE '^@PG.*ID:MarkDuplicates'; then
+                echo "Error: BAM file from ChIP-seq must be deduplicated prior to mapping." >&2
+            fi
             bed_file="$OUTPUT/$(basename "$(dirname "$input_file")")/$(basename "${input_file%%.*}")"
             samtools depth -a -o "${bed_file}.bed" "$input_file"
         fi

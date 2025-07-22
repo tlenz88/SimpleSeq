@@ -4,8 +4,6 @@
 Created: June 13, 2022
 Updated: December 12, 2023
 Author(s): Todd Lenz, tlenz001@ucr.edu
-
-Plots interaction heatmaps for Hi-C data.
 """
 
 import sys
@@ -136,29 +134,45 @@ def check_delimiter(gene_list):
 def main():
     args = parse_args(sys.argv[1:])
     read_counts, genes, out = input_params(args)
-
+    #read_counts = (read_counts.iloc[:, :].div(read_counts.iloc[:, :].sum()) * 1e6)
     mean_counts_sample1 = [np.mean(read_counts.loc[g, ['A3A', 'A3B']]) for g in genes[3]]
-    mean_counts_sample2 = [np.mean(read_counts.loc[g, ['D2A', 'D2B']]) for g in genes[3]]
-
+    print(mean_counts_sample1)
+    mean_counts_sample2 = [np.mean(read_counts.loc[g, ['B10A', 'B10B']]) for g in genes[3]]
+    print(mean_counts_sample2)
+    mean_counts_sample3 = [np.mean(read_counts.loc[g, ['D2A', 'D2B']]) for g in genes[3]]
+    print(mean_counts_sample3)
+    mean_counts_sample4 = [np.mean(read_counts.loc[g, ['G91A', 'G91B']]) for g in genes[3]]
+    print(mean_counts_sample4)
     err_sample1 = [np.min(read_counts.loc[g, ['A3A', 'A3B']]) for g in genes[3]]
     err_sample1 = [x - y for x, y in zip(mean_counts_sample1, err_sample1)]
-    err_sample2 = [np.min(read_counts.loc[g, ['D2A', 'D2B']]) for g in genes[3]]
+    err_sample2 = [np.min(read_counts.loc[g, ['B10A', 'B10B']]) for g in genes[3]]
     err_sample2 = [x - y for x, y in zip(mean_counts_sample2, err_sample2)]
+    err_sample3 = [np.min(read_counts.loc[g, ['D2A', 'D2B']]) for g in genes[3]]
+    err_sample3 = [x - y for x, y in zip(mean_counts_sample3, err_sample3)]
+    err_sample4 = [np.min(read_counts.loc[g, ['G91A', 'G91B']]) for g in genes[3]]
+    err_sample4 = [x - y for x, y in zip(mean_counts_sample4, err_sample4)]
 
     pdf = PdfPages(out)
-    fig, ax = plt.subplots(figsize=(12, 7))
+    fig, ax = plt.subplots(figsize=(24, 7))
 
     bar_width = 0.75
-    gap_between_groups = bar_width
     gap_between_bars = 0.01
-    x = np.arange(0, len(genes) * 2, 2)
-    x1 = x - (bar_width + gap_between_bars) / 2
-    x2 = x + (bar_width + gap_between_bars) / 2
+    x = np.arange(0, len(genes) * 4, 4)
+    x1 = x - (bar_width + gap_between_bars) * 1.5
+    x2 = x - (bar_width + gap_between_bars) / 2
+    x3 = x + (bar_width + gap_between_bars) / 2
+    x4 = x + (bar_width + gap_between_bars) * 1.5
 
     bars1 = plt.bar(x1, mean_counts_sample1, width=bar_width, 
                     color='#F3766E', label='WT')
+    #bars2 = plt.bar(x2, mean_counts_sample2, width=bar_width, 
+    #                color='#1CBDC2', label=r'$\Delta$V2')
     bars2 = plt.bar(x2, mean_counts_sample2, width=bar_width, 
-                    color='#1CBDC2', label=r'$\Delta$V2')
+                    color='#1CBDC2', label='B10')
+    bars3 = plt.bar(x3, mean_counts_sample3, width=bar_width, 
+                    color='#AA3DDD', label='D2')
+    bars4 = plt.bar(x4, mean_counts_sample4, width=bar_width, 
+                    color='#9E9E9E', label='G91')
 
     for bar, bar_error in zip(bars1, err_sample1):
         ax.errorbar(bar.get_x() + bar.get_width() / 2, bar.get_height(), 
@@ -171,15 +185,27 @@ def main():
                     yerr=[[bar_error], [bar_error]], color='black', 
                     capsize=bar_width * 1.5, capthick=bar_width / 1.5, 
                     elinewidth=bar_width / 1.25)
+    
+    for bar, bar_error in zip(bars3, err_sample3):
+        ax.errorbar(bar.get_x() + bar.get_width() / 2, bar.get_height(), 
+                    yerr=[[bar_error], [bar_error]], color='black', 
+                    capsize=bar_width * 1.5, capthick=bar_width / 1.5, 
+                    elinewidth=bar_width / 1.25)
+
+    for bar, bar_error in zip(bars4, err_sample4):
+        ax.errorbar(bar.get_x() + bar.get_width() / 2, bar.get_height(), 
+                    yerr=[[bar_error], [bar_error]], color='black', 
+                    capsize=bar_width * 1.5, capthick=bar_width / 1.5, 
+                    elinewidth=bar_width / 1.25)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    font = {'family':'Times New Roman',
+    font = {'family':'serif',
             'color':'black',
             'size':8}
     
     plt.ylabel('Normalized read count', labelpad=8, fontdict=font, ha='right')
-    ax.set_ylim(bottom=0, top=5000)
-    yticks = list(range(0, 5001, 1000))
+    ax.set_ylim(bottom=0, top=40000)
+    yticks = list(range(0, 40001, 5000))
     ax.set_yticks(yticks)
     ax.set_yticklabels(yticks, fontdict=font, ha='right')
 
@@ -189,15 +215,15 @@ def main():
     ax.spines['bottom'].set_position('zero')
 
     plt.xlabel('var genes', fontdict=font, ha='center')
-    ax.set_xlim(left=-bar_width * 2, right=len(genes[3]) * 2)
-    ax.set_xticks([i for i in range(0, len(genes[3]) * 2, 2)])
+    ax.set_xlim(left=-bar_width * 4, right=len(genes[3]) * 4)
+    ax.set_xticks([i for i in range(0, len(genes[3]) * 4, 4)])
     ax.set_xticklabels(genes[3], fontdict=font, ha='center')
     plt.xticks(rotation=90, fontsize=8)
 
     ax.tick_params(axis='both', which='both', pad=1)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    plt.legend(title='Sample', loc='upper center', 
+    plt.legend(title='Sample', loc='upper right', 
                edgecolor='black', labelspacing=0.5, 
                fontsize=font['size'], title_fontsize=font['size'], 
                borderpad=0.5, prop={'family': font['family']}, 

@@ -16,9 +16,10 @@ while getopts ":i:o:" opt; do
     esac
 done
 
+: <<'Deduplication method changed.'
 # Find script directory
 SCRIPTS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)/scripts"
-
+: <<
 # Determine the deduplication command
 if ! command -v picard &> /dev/null; then
     ptjar=$(find -L "$SCRIPTS" -mindepth 1 -name "picard.jar")
@@ -34,6 +35,7 @@ if ! command -v picard &> /dev/null; then
 else
     dedup_command="picard"
 fi
+Deduplication method changed.
 
 # Find SAM file
 sam_file=$(find -L "$INPUT" -mindepth 1 -name "*.sam")

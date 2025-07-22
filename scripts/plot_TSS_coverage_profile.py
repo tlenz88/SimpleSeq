@@ -150,8 +150,8 @@ def plot_read_counts(read_counts, fp, tp, out):
 def main():
     args = parse_args(sys.argv[1:])
     bed, genes, out = input_params(args)
-    fp = 500
-    tp = 1500
+    fp = 1000
+    tp = 1000
     read_counts = get_read_counts(bed, genes, fp, tp)
     merged_read_counts = pd.concat([df[[2]] for df in read_counts], axis=1)
     merged_read_counts = merged_read_counts.mean(axis=1)

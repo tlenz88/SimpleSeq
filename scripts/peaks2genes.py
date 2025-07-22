@@ -49,21 +49,6 @@ def assign_args(args):
     return genes, peaks, outdir, outfile
 
 
-def check_overlaps(sp, sg):
-    overlap = 0
-    sp_vals = list(range(sp[2],sp[3]))
-    peak_overlap = []
-    for g in sg.itertuples():
-        g_vals = list(range(g[4],g[5]))
-        ol = len(list(set(sp_vals) & set(g_vals)))
-        if ol > overlap:
-            overlap = ol
-            peak_overlap = g[10:]
-        else:
-            continue
-    return peak_overlap
-
-
 def main():
     genes, peaks, outdir, outfile = assign_args(sys.argv[1:])
     gene_peaks = []
