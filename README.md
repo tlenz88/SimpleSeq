@@ -268,3 +268,7 @@ The following are brief descriptions of the template columns:
     --ControlID: Short string unique to each control sample.
 
     --bamControl: Relative path to coordinate sorted BAM files for control samples.
+
+## Publications that used SimpleSeq
+
+Todd Lenz, Madle Sirel, Hannes Hoppe, Sulman Shafeeq, Ulf Ribacke (2026) **Epigenetics and chromatin structure regulate var2csa expression and the placental binding phenotype in Plasmodium falciparum** *eLife*
